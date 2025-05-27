@@ -1,8 +1,9 @@
 {
-  "name": "coilmaster-notion",
+  "name": "coilmaster-corporate-system",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://cm6156.github.io/coilmaster-notion",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

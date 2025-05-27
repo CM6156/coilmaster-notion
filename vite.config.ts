@@ -19,4 +19,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  base: '/coilmaster-notion/',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+  },
 }));
