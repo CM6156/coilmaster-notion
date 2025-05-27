@@ -25,7 +25,6 @@ export const clientsTranslations: ClientsTranslations = {
   requirements: "요구사항",
   client: "고객",
   partner: "파트너사",
-  clientList: "고객 목록",
   company: "회사",
   country: "국가",
   contact: "연락처",
