@@ -1,0 +1,38 @@
+
+import { CalendarTranslations } from '@/types';
+
+export const calendarTranslations: CalendarTranslations = {
+  title: "일정 관리",
+  subtitle: "업무 및 프로젝트 일정을 관리합니다",
+  today: "오늘",
+  month: "월",
+  week: "주",
+  day: "일",
+  agenda: "일정목록",
+  addEvent: "일정 추가",
+  editEvent: "일정 수정",
+  deleteEvent: "일정 삭제",
+  eventName: "일정명",
+  startDate: "시작일",
+  endDate: "종료일",
+  allDay: "종일",
+  description: "설명",
+  repeat: "반복",
+  save: "저장",
+  cancel: "취소",
+  delete: "삭제",
+  confirmDelete: "정말로 이 일정을 삭제하시겠습니까?",
+  noEvents: "표시할 일정이 없습니다",
+  previousMonth: "이전 달",
+  nextMonth: "다음 달",
+  projectEvent: "프로젝트 일정",
+  taskEvent: "업무 일정",
+  personalEvent: "개인 일정",
+  holidayEvent: "공휴일",
+  filter: "필터",
+  filterAll: "모든 일정",
+  filterProjects: "프로젝트",
+  filterTasks: "업무",
+  filterPersonal: "개인",
+  filterHolidays: "공휴일"
+};

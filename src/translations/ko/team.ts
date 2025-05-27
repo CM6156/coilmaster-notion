@@ -1,0 +1,35 @@
+
+import { TeamTranslations } from '@/types';
+
+export const teamTranslations: TeamTranslations = {
+  title: "팀 현황",
+  subTitle: "부서별 팀 현황",
+  staffCount: "전체 인원",
+  completionRate: "완료율",
+  progressRate: "진행률",
+  viewDetails: "상세 정보 보기",
+  noData: "데이터가 없습니다",
+  teamCorporation: "법인별",
+  teamDepartment: "부서별",
+  teamExecutive: "임원별",
+  byDepartment: "부서별",
+  byExecutive: "임원별",
+  byEmployee: "직원별",
+  byCompany: "법인별",
+  members: "구성원",
+  tasks: "업무",
+  projects: "프로젝트",
+  performance: "성과",
+  details: "세부사항",
+  name: "이름",
+  role: "역할",
+  department: "부서",
+  email: "이메일",
+  phone: "전화번호",
+  taskProgress: "업무 진행상황",
+  assignedTasks: "배정된 업무",
+  completedTasks: "완료된 업무",
+  pendingTasks: "대기중인 업무",
+  overduePercent: "지연율",
+  noDepartmentData: "부서 데이터가 없습니다"
+};

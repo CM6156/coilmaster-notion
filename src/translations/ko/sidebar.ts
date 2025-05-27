@@ -1,0 +1,31 @@
+import { SidebarTranslations } from '@/types';
+
+export const sidebarTranslations: SidebarTranslations = {
+  dashboard: "대시보드",
+  projects: "프로젝트",
+  tasks: "업무",
+  team: "팀",
+  calendar: "일정",
+  reports: "보고서",
+  clients: "고객사",
+  admin: "관리자",
+  adminPanel: "관리자 패널",
+  settings: "설정",
+  profile: "프로필",
+  logout: "로그아웃",
+  taskManagement: "업무 관리",
+  taskJournal: "업무 일지",
+  taskJournalList: "업무 일지 목록",
+  byCompany: "법인별",
+  teamCorporation: "법인별",
+  byDepartment: "부서별",
+  teamDepartment: "부서별",
+  byExecutive: "임원별",
+  teamExecutive: "임원별",
+  byEmployee: "직원별",
+  notifications: "알림",
+  online: "온라인",
+  systemStatus: "시스템 정상",
+  serverStatus: "서버 상태: 양호",
+  currentPage: "현재"
+};
