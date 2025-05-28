@@ -704,14 +704,6 @@ const ProjectDetail = () => {
               <CheckCircle2 className="h-5 w-5 text-blue-600" />
               하위 업무 ({subtaskStats.total}개)
             </h3>
-            <Button 
-              size="sm" 
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-              onClick={() => navigate(`/tasks?projectId=${project.id}&action=create`)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              업무 추가
-            </Button>
           </div>
 
           {/* 업무 현황 요약 */}
@@ -750,129 +742,178 @@ const ProjectDetail = () => {
           </div>
 
           {/* 업무 목록 */}
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {normalizedProjectTasks
-              .sort((a, b) => {
-                // 업무 단계의 order_index로 정렬
-                const phaseA = taskPhases.find(p => p.id === a.taskPhase);
-                const phaseB = taskPhases.find(p => p.id === b.taskPhase);
-                
-                const orderA = phaseA?.order_index || 999;
-                const orderB = phaseB?.order_index || 999;
-                
-                if (orderA !== orderB) {
-                  return orderA - orderB;
-                }
-                
-                // 같은 단계라면 생성일순으로 정렬
-                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-              })
-              .map((task, index) => {
-                const phaseInfo = getTaskPhaseInfo(task.taskPhase);
-                
-                return (
-                  <div 
-                    key={task.id}
-                    className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {/* Stage 번호 */}
-                          <span className="text-sm font-medium text-gray-600">
-                            {getTaskStageNumber(task)}.
-                          </span>
-                          
-                          <div className={cn(
-                            "w-3 h-3 rounded-full",
-                            task.status === '완료' ? "bg-green-500" :
-                            task.status === '진행중' ? "bg-blue-500" :
-                            task.status === '검토중' ? "bg-purple-500" :
-                            task.status === '지연' ? "bg-red-500" :
-                            task.status === '보류' ? "bg-yellow-500" : "bg-gray-400"
-                          )}></div>
-                          
-                          {/* 업무 단계 배지 */}
-                          <Badge 
-                            variant="outline" 
-                            className="text-sm font-medium"
-                            style={{ 
-                              backgroundColor: `${phaseInfo.color}20`,
-                              borderColor: phaseInfo.color,
-                              color: phaseInfo.color
-                            }}
-                          >
-                            📋 {phaseInfo.name}
-                          </Badge>
-                        </div>
-                      
-                        {/* 업무 제목 */}
-                        <h4 className="text-base font-medium text-gray-900 mb-2">
-                          {getTaskStageNumber(task)} {task.title}
-                        </h4>
+          {normalizedProjectTasks.length > 0 ? (
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Stage
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Task Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        담당
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        부서
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Due Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        상태
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        OverDue
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        자료 Link
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        비고
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {normalizedProjectTasks
+                      .sort((a, b) => {
+                        // 업무 단계의 order_index로 정렬
+                        const phaseA = taskPhases.find(p => p.id === a.taskPhase);
+                        const phaseB = taskPhases.find(p => p.id === b.taskPhase);
                         
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                          {task.description}
-                        </p>
+                        const orderA = phaseA?.order_index || 999;
+                        const orderB = phaseB?.order_index || 999;
                         
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>마감: {formatDate(task.dueDate)}</span>
-                          </div>
-                          {task.assignedTo && (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              <span>담당자: {task.assignedTo}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 ml-4">
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-gray-900">
-                            {task.progress}%
-                          </div>
-                          <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1">
-                            <div 
-                              className={cn(
-                                "h-full transition-all duration-300",
-                                task.progress < 30 ? "bg-red-500" :
-                                task.progress < 70 ? "bg-yellow-500" : "bg-green-500"
+                        if (orderA !== orderB) {
+                          return orderA - orderB;
+                        }
+                        
+                        // 같은 단계라면 생성일순으로 정렬
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                      })
+                      .map((task, index) => {
+                        const phaseInfo = getTaskPhaseInfo(task.taskPhase);
+                        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== '완료';
+                        
+                        return (
+                          <tr key={task.id} className="hover:bg-gray-50">
+                            {/* Stage */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {getTaskStageNumber(task)}.
+                                </span>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  style={{ 
+                                    backgroundColor: `${phaseInfo.color}20`,
+                                    borderColor: phaseInfo.color,
+                                    color: phaseInfo.color
+                                  }}
+                                >
+                                  {phaseInfo.name}
+                                </Badge>
+                              </div>
+                            </td>
+                            
+                            {/* Task Name */}
+                            <td className="px-4 py-3">
+                              <div className="text-sm font-medium text-gray-900 max-w-xs">
+                                {task.title}
+                              </div>
+                              {task.description && (
+                                <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                  {task.description}
+                                </div>
                               )}
-                              style={{ width: `${task.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                        
-                        <Badge 
-                          variant="outline" 
-                          className={cn(
-                            "text-xs",
-                            task.status === '완료' && "bg-green-100 text-green-800 border-green-300",
-                            task.status === '진행중' && "bg-blue-100 text-blue-800 border-blue-300",
-                            task.status === '검토중' && "bg-purple-100 text-purple-800 border-purple-300",
-                            task.status === '지연' && "bg-red-100 text-red-800 border-red-300",
-                            task.status === '보류' && "bg-yellow-100 text-yellow-800 border-yellow-300"
-                          )}
-                        >
-                          {task.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            
-            {normalizedProjectTasks.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-lg font-medium mb-2">등록된 업무가 없습니다</p>
-                <p className="text-sm">첫 번째 업무를 추가해보세요.</p>
+                            </td>
+                            
+                            {/* 담당 */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-6 w-6 bg-gray-300 rounded-full flex items-center justify-center">
+                                  <User className="h-3 w-3 text-gray-600" />
+                                </div>
+                                <div className="ml-2">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {task.assignedTo || '미지정'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            
+                            {/* 부서 */}
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {task.department || '-'}
+                            </td>
+                            
+                            {/* Due Date */}
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {formatDate(task.dueDate)}
+                            </td>
+                            
+                            {/* 상태 */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className={cn(
+                                  "w-2 h-2 rounded-full",
+                                  task.status === '완료' ? "bg-green-500" :
+                                  task.status === '진행중' ? "bg-blue-500" :
+                                  task.status === '검토중' ? "bg-purple-500" :
+                                  task.status === '지연' ? "bg-red-500" :
+                                  task.status === '보류' ? "bg-yellow-500" : "bg-gray-400"
+                                )}></div>
+                                <span className="text-sm text-gray-900">{task.status}</span>
+                                <span className="text-xs text-gray-500">{task.progress}%</span>
+                              </div>
+                            </td>
+                            
+                            {/* OverDue */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isOverdue ? (
+                                <div className="flex items-center text-red-600">
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  <span className="text-xs font-medium">
+                                    {Math.ceil((new Date().getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24))}일 지연
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center text-green-600">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  <span className="text-xs">정상</span>
+                                </div>
+                              )}
+                            </td>
+                            
+                            {/* 자료 Link */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-xs text-gray-400">-</span>
+                            </td>
+                            
+                            {/* 비고 */}
+                            <td className="px-4 py-3">
+                              <div className="text-xs text-gray-500 max-w-xs">
+                                -
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium mb-2">등록된 업무가 없습니다</p>
+              <p className="text-sm">업무 관리에서 업무를 등록해주세요.</p>
+            </div>
+          )}
         </div>
       </div>
 
