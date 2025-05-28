@@ -23,6 +23,7 @@ import { Task } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { format, isValid, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
+import React from "react";
 
 const Tasks = () => {
   const { 
@@ -206,7 +207,7 @@ const Tasks = () => {
       if (type === 'select') {
         return (
           <Select
-            value={value}
+            value={value || ''}
             onValueChange={(newValue) => handleCellUpdate(task.id, field, newValue)}
             onOpenChange={(open) => !open && setEditingCell(null)}
           >
@@ -214,7 +215,7 @@ const Tasks = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {options?.map((option) => (
+              {options?.filter(option => option.value !== '').map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -338,7 +339,7 @@ const Tasks = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">모든 담당자</SelectItem>
-            {[...users, ...employees, ...managers].map((person) => (
+            {[...users, ...employees, ...managers].filter(person => person.id && person.name).map((person) => (
               <SelectItem key={person.id} value={person.id}>
                 {person.name}
               </SelectItem>
@@ -389,9 +390,9 @@ const Tasks = () => {
                 const isExpanded = expandedTasks.has(task.id);
                 
                 return (
-                  <>
+                  <React.Fragment key={task.id}>
                     {/* Parent Task Row */}
-                    <tr key={task.id} className="hover:bg-gray-50">
+                    <tr className="hover:bg-gray-50">
                       {/* Expand/Collapse + Add Child Button */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-1">
@@ -448,7 +449,7 @@ const Tasks = () => {
                       {/* 담당 */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         {renderEditableCell(task, 'assignedTo', getAssigneeName(task.assignedTo), 'select', 
-                          [...users, ...employees, ...managers].map(person => ({
+                          [...users, ...employees, ...managers].filter(person => person.id && person.name).map(person => ({
                             value: person.id,
                             label: person.name
                           }))
@@ -458,7 +459,7 @@ const Tasks = () => {
                       {/* 부서 */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         {renderEditableCell(task, 'department', getDepartmentName(task.department), 'select',
-                          departments.map(dept => ({
+                          departments.filter(dept => dept.id && dept.name).map(dept => ({
                             value: dept.id,
                             label: dept.name
                           }))
@@ -495,7 +496,7 @@ const Tasks = () => {
                       {/* 프로젝트 */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         {renderEditableCell(task, 'projectId', getProjectName(task.projectId), 'select',
-                          projects.map(project => ({
+                          projects.filter(project => project.id && project.name).map(project => ({
                             value: project.id,
                             label: project.name
                           }))
@@ -550,7 +551,7 @@ const Tasks = () => {
                           
                           <td className="px-4 py-3 whitespace-nowrap">
                             {renderEditableCell(childTask, 'assignedTo', getAssigneeName(childTask.assignedTo), 'select', 
-                              [...users, ...employees, ...managers].map(person => ({
+                              [...users, ...employees, ...managers].filter(person => person.id && person.name).map(person => ({
                                 value: person.id,
                                 label: person.name
                               }))
@@ -559,7 +560,7 @@ const Tasks = () => {
                           
                           <td className="px-4 py-3 whitespace-nowrap">
                             {renderEditableCell(childTask, 'department', getDepartmentName(childTask.department), 'select',
-                              departments.map(dept => ({
+                              departments.filter(dept => dept.id && dept.name).map(dept => ({
                                 value: dept.id,
                                 label: dept.name
                               }))
@@ -592,7 +593,7 @@ const Tasks = () => {
                           
                           <td className="px-4 py-3 whitespace-nowrap">
                             {renderEditableCell(childTask, 'projectId', getProjectName(childTask.projectId), 'select',
-                              projects.map(project => ({
+                              projects.filter(project => project.id && project.name).map(project => ({
                                 value: project.id,
                                 label: project.name
                               }))
@@ -601,7 +602,7 @@ const Tasks = () => {
                         </tr>
                       );
                     })}
-                  </>
+                  </React.Fragment>
                 );
               })}
               
