@@ -665,7 +665,7 @@ const ProjectDetailsDialog = ({
                 {project.name}
               </DialogTitle>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                 {canDelete && (
                   <>
                     {!showDeleteConfirm ? (
@@ -679,20 +679,22 @@ const ProjectDetailsDialog = ({
                         삭제
                       </Button>
                     ) : (
-                      <div className="flex flex-col gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-3 rounded-lg border border-red-200 dark:border-red-800">
-                        <span className="text-sm text-red-700 dark:text-red-300 font-medium">정말 삭제하시겠습니까?</span>
-                        {projectTasks.length > 0 && (
-                          <span className="text-xs text-red-600 dark:text-red-400">
-                            ⚠️ 관련 업무 {projectTasks.length}개도 함께 삭제됩니다.
-                          </span>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-col gap-3 bg-red-50 dark:bg-red-900/20 px-5 py-4 rounded-lg border border-red-200 dark:border-red-800 shadow-lg min-w-[280px]">
+                        <div className="text-center">
+                          <span className="text-sm text-red-700 dark:text-red-300 font-medium block">정말 삭제하시겠습니까?</span>
+                          {projectTasks.length > 0 && (
+                            <span className="text-xs text-red-600 dark:text-red-400 mt-1 block">
+                              ⚠️ 관련 업무 {projectTasks.length}개도 함께 삭제됩니다.
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 justify-center">
                           <Button
                             variant="destructive"
                             size="sm"
                             onClick={handleDelete}
                             disabled={isDeleting}
-                            className="h-8 px-3"
+                            className="h-8 px-4 min-w-[60px]"
                           >
                             {isDeleting ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -704,7 +706,7 @@ const ProjectDetailsDialog = ({
                             variant="outline"
                             size="sm"
                             onClick={() => setShowDeleteConfirm(false)}
-                            className="h-8 px-3"
+                            className="h-8 px-4 min-w-[60px]"
                           >
                             취소
                           </Button>
@@ -713,6 +715,16 @@ const ProjectDetailsDialog = ({
                     )}
                   </>
                 )}
+                
+                {/* 닫기 버튼을 오른쪽 끝에 배치 */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                  className="text-gray-500 hover:text-gray-700 ml-4"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </DialogHeader>

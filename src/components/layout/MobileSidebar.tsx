@@ -203,13 +203,13 @@ const MobileSidebar = () => {
   }
 
   const menuItems: MenuItem[] = [
-    {
-      name: t.dashboard,
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      path: "/",
-      gradient: "from-blue-500 to-purple-600",
-      badge: hasNewFeatures ? "NEW" : undefined
-    },
+    // {
+    //   name: t.dashboard,
+    //   icon: <LayoutDashboard className="h-5 w-5" />,
+    //   path: "/",
+    //   gradient: "from-blue-500 to-purple-600",
+    //   badge: hasNewFeatures ? "NEW" : undefined
+    // },
     {
       name: t.projects,
       icon: <Folder className="h-5 w-5" />,
@@ -224,12 +224,12 @@ const MobileSidebar = () => {
           color: "text-green-600",
           badge: activeProjects > 0 ? activeProjects : undefined
         },
-        {
-          name: t.clients || "고객사",
-          path: "/clients",
-          icon: <Briefcase className="h-4 w-4" />,
-          color: "text-blue-600"
-        },
+        // {
+        //   name: t.clients || "고객사",
+        //   path: "/clients",
+        //   icon: <Briefcase className="h-4 w-4" />,
+        //   color: "text-blue-600"
+        // },
       ],
     },
     {
@@ -294,10 +294,8 @@ const MobileSidebar = () => {
     
     // 기타 경로에 대한 매핑
     const pathMap: Record<string, string> = {
-      "/": t.dashboard || "대시보드",
-      "/dashboard": t.dashboard || "대시보드",
+      "/": t.projects || "프로젝트",
       "/projects": t.projects || "프로젝트",
-      "/clients": t.clients || "고객사",
       "/tasks": t.taskManagement || "업무 관리",
       "/tasks/journal": t.taskJournal || "업무 일지",
       "/tasks/journal-list": t.taskJournalList || "업무 일지 목록",

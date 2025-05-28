@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,6 @@ import {
 import ProjectCreateDialog from "@/components/projects/ProjectCreateDialog";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { useLanguage } from "@/context/LanguageContext";
-import ProjectDetailsDialog from "@/components/projects/ProjectDetailsDialog";
 import { Project } from "@/types";
 import { format, isValid, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -36,11 +36,10 @@ import { ko } from "date-fns/locale";
 const Projects = () => {
   const { projects, calculateProjectProgress } = useAppContext();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const { translations } = useLanguage();
+  const navigate = useNavigate();
   
   // Format date properly
   const formatDate = (dateString?: string) => {
@@ -57,6 +56,61 @@ const Projects = () => {
   // 프로젝트의 실제 진행률 가져오기 (하위 업무 기반)
   const getActualProgress = (project: Project) => {
     return calculateProjectProgress(project.id);
+  };
+
+  // 프로젝트 지연 여부 자동 판단
+  const isProjectDelayed = (project: Project) => {
+    if (!project.endDate) return false;
+    
+    const endDate = new Date(project.endDate);
+    const today = new Date();
+    const progress = getActualProgress(project);
+    
+    // 마감일이 지났고 완료되지 않은 경우
+    if (endDate < today && project.status !== 'completed') {
+      return true;
+    }
+    
+    // 마감일까지 남은 일수 대비 진행률이 현저히 낮은 경우
+    const totalDays = project.startDate ? 
+      Math.ceil((endDate.getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+      0;
+    const passedDays = project.startDate ? 
+      Math.ceil((today.getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+      0;
+    
+    if (totalDays > 0) {
+      const expectedProgress = Math.min((passedDays / totalDays) * 100, 100);
+      // 예상 진행률보다 20% 이상 뒤처진 경우
+      if (progress < expectedProgress - 20 && project.status === 'active') {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // 동적 프로젝트 상태 계산
+  const getProjectStatus = (project: Project) => {
+    const progress = getActualProgress(project);
+    
+    // 완료된 프로젝트
+    if (progress >= 100 || project.status === 'completed') {
+      return 'completed';
+    }
+    
+    // 보류된 프로젝트
+    if (project.status === 'on-hold') {
+      return 'on-hold';
+    }
+    
+    // 지연된 프로젝트
+    if (isProjectDelayed(project)) {
+      return 'delayed';
+    }
+    
+    // 진행중인 프로젝트
+    return 'active';
   };
 
   const getProgressColor = (progress: number) => {
@@ -136,24 +190,23 @@ const Projects = () => {
   };
 
   const handleOpenDetails = (project: Project) => {
-    setSelectedProject(project);
-    setIsDetailsDialogOpen(true);
+    navigate(`/projects/${project.id}`);
   };
 
-  // 필터링된 프로젝트
-  const filteredProjects = projects.filter(project => {
-    if (filterStatus === 'all') return true;
-    return project.status === filterStatus;
-  });
-
-  // 상태별 프로젝트 수
+  // 동적 상태별 프로젝트 수 계산
   const statusCounts = {
     all: projects.length,
-    active: projects.filter(p => p.status === 'active').length,
-    completed: projects.filter(p => p.status === 'completed').length,
-    delayed: projects.filter(p => p.status === 'delayed').length,
-    'on-hold': projects.filter(p => p.status === 'on-hold').length,
+    active: projects.filter(p => getProjectStatus(p) === 'active').length,
+    completed: projects.filter(p => getProjectStatus(p) === 'completed').length,
+    delayed: projects.filter(p => getProjectStatus(p) === 'delayed').length,
+    'on-hold': projects.filter(p => getProjectStatus(p) === 'on-hold').length,
   };
+
+  // 필터링된 프로젝트 (동적 상태 기준)
+  const filteredProjects = projects.filter(project => {
+    if (filterStatus === 'all') return true;
+    return getProjectStatus(project) === filterStatus;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
@@ -184,45 +237,72 @@ const Projects = () => {
 
           {/* 통계 카드 */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            {Object.entries(statusCounts).map(([status, count]) => (
-              <Card 
-                key={status}
-                className={cn(
-                  "border-0 shadow-md cursor-pointer transition-all duration-200",
-                  filterStatus === status && "ring-2 ring-primary shadow-lg scale-105"
-                )}
-                onClick={() => setFilterStatus(status)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {status === 'all' && '전체'}
-                        {status === 'active' && '진행중'}
-                        {status === 'completed' && '완료'}
-                        {status === 'delayed' && '지연'}
-                        {status === 'on-hold' && '보류'}
-                      </p>
-                      <p className="text-2xl font-bold">{count}</p>
+            {Object.entries(statusCounts).map(([status, count]) => {
+              const percentage = projects.length > 0 ? Math.round((count / projects.length) * 100) : 0;
+              
+              return (
+                <Card 
+                  key={status}
+                  className={cn(
+                    "border-0 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105",
+                    filterStatus === status && "ring-2 ring-primary shadow-lg scale-105"
+                  )}
+                  onClick={() => setFilterStatus(status)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {status === 'all' && '전체'}
+                            {status === 'active' && '진행중'}
+                            {status === 'completed' && '완료'}
+                            {status === 'delayed' && '지연'}
+                            {status === 'on-hold' && '보류'}
+                          </p>
+                          {status !== 'all' && (
+                            <span className="text-xs text-muted-foreground">
+                              {percentage}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-2xl font-bold">
+                          {count}
+                        </p>
+                        {status !== 'all' && (
+                          <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+                            <div
+                              className={cn(
+                                "h-1 rounded-full transition-all duration-300",
+                                status === 'active' && "bg-blue-500",
+                                status === 'completed' && "bg-green-500",
+                                status === 'delayed' && "bg-red-500",
+                                status === 'on-hold' && "bg-gray-500"
+                              )}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className={cn(
+                        "p-2 rounded-lg ml-3",
+                        status === 'all' && "bg-slate-100 dark:bg-slate-800",
+                        status === 'active' && "bg-blue-100 dark:bg-blue-900/30",
+                        status === 'completed' && "bg-green-100 dark:bg-green-900/30",
+                        status === 'delayed' && "bg-red-100 dark:bg-red-900/30",
+                        status === 'on-hold' && "bg-gray-100 dark:bg-gray-900/30"
+                      )}>
+                        {status === 'all' && <Briefcase className="h-5 w-5 text-slate-600" />}
+                        {status === 'active' && <Loader2 className="h-5 w-5 text-blue-600" />}
+                        {status === 'completed' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                        {status === 'delayed' && <AlertCircle className="h-5 w-5 text-red-600" />}
+                        {status === 'on-hold' && <Clock className="h-5 w-5 text-gray-600" />}
+                      </div>
                     </div>
-                    <div className={cn(
-                      "p-2 rounded-lg",
-                      status === 'all' && "bg-slate-100 dark:bg-slate-800",
-                      status === 'active' && "bg-blue-100 dark:bg-blue-900/30",
-                      status === 'completed' && "bg-green-100 dark:bg-green-900/30",
-                      status === 'delayed' && "bg-red-100 dark:bg-red-900/30",
-                      status === 'on-hold' && "bg-gray-100 dark:bg-gray-900/30"
-                    )}>
-                      {status === 'all' && <Briefcase className="h-5 w-5" />}
-                      {status === 'active' && <Loader2 className="h-5 w-5 text-blue-600" />}
-                      {status === 'completed' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                      {status === 'delayed' && <AlertCircle className="h-5 w-5 text-red-600" />}
-                      {status === 'on-hold' && <Clock className="h-5 w-5 text-gray-600" />}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* 뷰 모드 전환 */}
@@ -300,7 +380,7 @@ const Projects = () => {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredProjects.map((project) => {
                     const progress = getActualProgress(project);
-                    const StatusIcon = getStatusIcon(project.status);
+                    const StatusIcon = getStatusIcon(getProjectStatus(project));
                     
                     return (
                       <tr 
@@ -327,9 +407,9 @@ const Projects = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant={getStatusColor(project.status)} className="flex items-center gap-1 w-fit">
+                          <Badge variant={getStatusColor(getProjectStatus(project))} className="flex items-center gap-1 w-fit">
                             <StatusIcon className="h-3 w-3" />
-                            {getStatusText(project.status)}
+                            {getStatusText(getProjectStatus(project))}
                           </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -393,13 +473,6 @@ const Projects = () => {
       <ProjectCreateDialog 
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen} 
-      />
-
-      {/* Project Details Dialog */}
-      <ProjectDetailsDialog
-        project={selectedProject}
-        open={isDetailsDialogOpen}
-        onOpenChange={setIsDetailsDialogOpen}
       />
     </div>
   );

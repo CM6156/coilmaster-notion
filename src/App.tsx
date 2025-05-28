@@ -7,10 +7,11 @@ import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 
 // Pages
-import Dashboard from "./pages/Dashboard";
+// import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
-import Clients from "./pages/Clients";
+import ProjectDetail from "./pages/ProjectDetail";
+// import Clients from "./pages/Clients";
 // import Calendar from "./pages/Calendar";
 // import Reports from "./pages/Reports";
 // import TeamView from "./pages/TeamView";
@@ -76,7 +77,7 @@ const RootRedirect = () => {
     );
   }
   
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/intro"} replace />;
+  return <Navigate to={isAuthenticated ? "/projects" : "/intro"} replace />;
 };
 
 const App = () => {
@@ -101,7 +102,7 @@ const App = () => {
                 <Layout />
               </ProtectedRoute>
             }>
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* <Route path="/dashboard" element={<Dashboard />} /> */}
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/tasks/journal" element={<TaskJournal />} />
               <Route path="/tasks/journal/:id" element={<TaskJournal />} />
@@ -109,7 +110,8 @@ const App = () => {
               {/* Add the journal-list route to fix the 404 error */}
               <Route path="/tasks/journal-list" element={<TaskJournalList />} />
               <Route path="/projects" element={<Projects />} />
-              <Route path="/clients" element={<Clients />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
+              {/* <Route path="/clients" element={<Clients />} /> */}
               <Route path="/customers" element={<Customers />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/daily-reports" element={<DailyReports />} />

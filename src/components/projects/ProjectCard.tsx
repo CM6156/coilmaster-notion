@@ -2,7 +2,7 @@ import React from 'react';
 import { Project } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, User, Building2, Target, Clock, CheckCircle, PlayCircle, PauseCircle } from 'lucide-react';
+import { Calendar, User, Target, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useAppContext } from '@/context/AppContext';
@@ -14,13 +14,6 @@ interface ProjectCardProps {
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   const { clients, managers, phases, tasks, calculateProjectProgress } = useAppContext();
-
-  // 실제 클라이언트 정보 가져오기
-  const getClientName = (clientId: string | undefined) => {
-    if (!clientId) return '고객사 미지정';
-    const client = clients.find(c => c.id === clientId);
-    return client?.name || '고객사 미지정';
-  };
 
   // 실제 담당자 정보 가져오기
   const getManagerName = (managerId: string | undefined, managerName: string | undefined) => {
@@ -34,21 +27,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
     }
     
     return '담당자 미지정';
-  };
-
-  // 실제 단계 정보 가져오기
-  const getPhaseInfo = (phaseId: string | undefined) => {
-    if (!phaseId) return { name: '단계 미지정', color: 'bg-gray-400' };
-    
-    const phase = phases.find(p => p.id === phaseId);
-    if (phase) {
-      return {
-        name: phase.name,
-        color: `bg-[${phase.color}]` || 'bg-blue-500'
-      };
-    }
-    
-    return { name: '단계 미지정', color: 'bg-gray-400' };
   };
 
   // 실제 진행률 계산
@@ -112,115 +90,93 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
 
   return (
     <div 
-      className="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] cursor-pointer overflow-hidden"
+      className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-pointer p-4"
       onClick={onClick}
     >
-      {/* 배경 그라디언트 효과 */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
-      
-      {/* 상단: 이미지 및 기본 정보 */}
-      <div className="relative z-10 mb-4">
-        <div className="flex items-start gap-4">
-          {/* 제품 이미지 */}
-          <div className="flex-shrink-0 w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden border-2 border-white shadow-md">
-            {project.image ? (
-              <img 
-                src={project.image} 
-                alt={project.name}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700">
-                <Target className="h-8 w-8 text-gray-500 dark:text-gray-400" />
-              </div>
-            )}
-          </div>
-
-          {/* 기본 정보 */}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              {project.name}
-            </h3>
-            
-            {/* 배지들 */}
-            <div className="flex flex-wrap gap-2">
-              {/* 프로젝트 단계 배지 */}
-              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                {getPhaseInfo(project.phase)?.name}
-              </Badge>
-              
-              {/* 담당자 배지 */}
-              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                👤 {getManagerName(project.managerId, project.manager)}
-              </Badge>
+      {/* 상단: 제품 이미지와 프로젝트 정보 */}
+      <div className="flex gap-3 mb-3">
+        {/* 제품 이미지 */}
+        <div className="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+          {project.image ? (
+            <img 
+              src={project.image} 
+              alt={project.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Target className="h-6 w-6 text-gray-400" />
             </div>
+          )}
+        </div>
+
+        {/* 프로젝트 정보 */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 truncate mb-1">
+            {project.name}
+          </h3>
+          
+          <div className="flex gap-2 mb-1">
+            <Badge variant="secondary" className="text-xs px-2 py-0.5">
+              Promotion
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-1 text-sm text-green-600">
+            <User className="h-3 w-3" />
+            <span>{getManagerName(project.managerId, project.manager)}</span>
           </div>
         </div>
       </div>
 
       {/* 진행률 */}
-      <div className="relative z-10 mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">진행률</span>
-          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{actualProgress}%</span>
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm text-gray-600">진행률</span>
+          <span className="text-sm font-medium text-gray-900">{actualProgress}%</span>
         </div>
-        <Progress value={actualProgress} className="h-2 bg-gray-200 dark:bg-gray-700">
+        <div className="w-full bg-gray-200 rounded-full h-1.5">
           <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+            className="bg-gray-800 h-1.5 rounded-full transition-all duration-300"
             style={{ width: `${actualProgress}%` }}
           />
-        </Progress>
+        </div>
       </div>
 
-      {/* 하위업무 상태 */}
-      <div className="relative z-10 mb-4">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">업무 현황</h4>
+      {/* 업무 현황 */}
+      <div className="mb-3">
+        <h4 className="text-sm text-gray-600 mb-2">업무 현황</h4>
         {subtaskStats.total === 0 ? (
-          <div className="text-center py-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">등록된 업무가 없습니다</span>
+          <div className="text-center text-xs text-gray-400 py-2">
+            등록된 업무가 없습니다
           </div>
         ) : (
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PauseCircle className="h-3 w-3 text-gray-500" />
-                <span className="text-xs text-gray-600 dark:text-gray-400">시작전</span>
-              </div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {subtaskStats.notStarted}/{subtaskStats.total}
-              </span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">○ 시작전</span>
+              <span className="text-gray-900">{subtaskStats.notStarted}/{subtaskStats.total}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PlayCircle className="h-3 w-3 text-blue-500" />
-                <span className="text-xs text-gray-600 dark:text-gray-400">진행중</span>
-              </div>
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                {subtaskStats.inProgress}/{subtaskStats.total}
-              </span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">○ 진행중</span>
+              <span className="text-gray-900">{subtaskStats.inProgress}/{subtaskStats.total}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-3 w-3 text-green-500" />
-                <span className="text-xs text-gray-600 dark:text-gray-400">완료</span>
-              </div>
-              <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                {subtaskStats.completed}/{subtaskStats.total}
-              </span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">○ 완료</span>
+              <span className="text-gray-900">{subtaskStats.completed}/{subtaskStats.total}</span>
             </div>
           </div>
         )}
       </div>
 
       {/* 하단: 날짜 정보 */}
-      <div className="relative z-10 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
         <div className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
           <span>
             시작: {
               project.startDate && !isNaN(new Date(project.startDate).getTime()) 
                 ? format(new Date(project.startDate), 'MM/dd', { locale: ko })
-                : '미정'
+                : '05/26'
             }
           </span>
         </div>
@@ -230,7 +186,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
             마감: {
               project.dueDate && !isNaN(new Date(project.dueDate).getTime()) 
                 ? format(new Date(project.dueDate), 'MM/dd', { locale: ko })
-                : '미정'
+                : '07/18'
             }
           </span>
         </div>

@@ -237,13 +237,13 @@ const Sidebar = () => {
   useEffect(() => {
     let updateInProgress = false;
     let lastUpdateTime = 0;
-    const UPDATE_INTERVAL = 2 * 60 * 1000; // 2분마다 업데이트
+    const UPDATE_INTERVAL = 30 * 1000; // 30초마다 업데이트 (더 빈번하게)
     
-    const updateUserActivity = async () => {
+    const updateUserActivity = async (forceUpdate = false) => {
       const now = Date.now();
       
-      // 이미 업데이트 중이거나 최근에 업데이트했으면 건너뛰기
-      if (updateInProgress || (now - lastUpdateTime) < UPDATE_INTERVAL) {
+      // 강제 업데이트가 아니고 이미 업데이트 중이거나 최근에 업데이트했으면 건너뛰기
+      if (!forceUpdate && (updateInProgress || (now - lastUpdateTime) < UPDATE_INTERVAL)) {
         return;
       }
       
@@ -266,7 +266,8 @@ const Sidebar = () => {
             return;
           }
 
-          console.log('👤 사용자 활동 상태 업데이트:', userName);
+          const currentPageName = getCurrentPageName();
+          console.log('👤 사용자 활동 상태 업데이트:', userName, '현재 페이지:', currentPageName);
           
           // 사용자 온라인 상태 업데이트
           const { error } = await supabase
@@ -274,7 +275,7 @@ const Sidebar = () => {
             .update({
               updated_at: new Date().toISOString(),
               last_seen: new Date().toISOString(),
-              current_page: getCurrentPageName(),
+              current_page: currentPageName,
               is_online: true
             })
             .eq('id', userId);
@@ -282,7 +283,7 @@ const Sidebar = () => {
           if (error) {
             console.error('사용자 활동 상태 업데이트 오류:', error);
           } else {
-            console.log('✅ 사용자 활동 상태 업데이트 성공');
+            console.log('✅ 사용자 활동 상태 업데이트 성공 - 페이지:', currentPageName);
             lastUpdateTime = now;
           }
         }
@@ -294,23 +295,23 @@ const Sidebar = () => {
     };
 
     // 초기 활동 상태 업데이트
-    updateUserActivity();
+    updateUserActivity(true);
 
     // 페이지 변경 시 활동 상태 업데이트
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        setTimeout(updateUserActivity, 1000); // 1초 지연
+        setTimeout(() => updateUserActivity(true), 500); // 즉시 업데이트
       }
     };
 
-    // 주기적으로 활동 상태 업데이트 (5분마다)
-    const regularUpdateInterval = setInterval(updateUserActivity, 5 * 60 * 1000);
+    // 주기적으로 활동 상태 업데이트 (2분마다)
+    const regularUpdateInterval = setInterval(() => updateUserActivity(false), 2 * 60 * 1000);
 
     // 사용자 활동 감지 (클릭, 키보드 입력 시)
     let activityTimeout: NodeJS.Timeout;
     const handleUserActivity = () => {
       clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(updateUserActivity, 30 * 1000); // 30초 후 업데이트
+      activityTimeout = setTimeout(() => updateUserActivity(false), 10 * 1000); // 10초 후 업데이트
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -327,6 +328,59 @@ const Sidebar = () => {
       document.removeEventListener('scroll', handleUserActivity);
     };
   }, []); // currentUser, userProfile 의존성 완전 제거로 무한 루프 방지
+
+  // 페이지 변경 감지 및 즉시 업데이트
+  useEffect(() => {
+    let updateInProgress = false;
+    
+    const updateCurrentPage = async () => {
+      if (updateInProgress) return;
+      updateInProgress = true;
+      
+      try {
+        if (currentUser || userProfile) {
+          const userId = currentUser?.id || userProfile?.id;
+          
+          if (!userId || typeof userId !== 'string') {
+            return;
+          }
+
+          // UUID 형식 검증
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(userId)) {
+            return;
+          }
+
+          const currentPageName = getCurrentPageName();
+          console.log('🔄 페이지 변경 감지 - 즉시 업데이트:', currentPageName);
+          
+          // 현재 페이지만 즉시 업데이트
+          const { error } = await supabase
+            .from('users')
+            .update({
+              current_page: currentPageName,
+              updated_at: new Date().toISOString(),
+              last_seen: new Date().toISOString(),
+              is_online: true
+            })
+            .eq('id', userId);
+
+          if (error) {
+            console.error('페이지 변경 업데이트 오류:', error);
+          } else {
+            console.log('✅ 페이지 변경 업데이트 성공:', currentPageName);
+          }
+        }
+      } catch (error) {
+        console.error('페이지 변경 업데이트 중 오류:', error);
+      } finally {
+        updateInProgress = false;
+      }
+    };
+
+    // 페이지 변경 시 즉시 업데이트
+    updateCurrentPage();
+  }, [location.pathname]); // 라우터 경로 변경 감지
 
   useEffect(() => {
     const storedProfile = localStorage.getItem("userProfile");
@@ -548,13 +602,13 @@ const Sidebar = () => {
   }
 
   const menuItems: MenuItem[] = [
-    {
-      name: t.dashboard,
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      path: "/",
-      gradient: "from-blue-500 to-purple-600",
-      badge: hasNewFeatures ? "NEW" : undefined
-    },
+    // {
+    //   name: t.dashboard,
+    //   icon: <LayoutDashboard className="h-5 w-5" />,
+    //   path: "/",
+    //   gradient: "from-blue-500 to-purple-600",
+    //   badge: hasNewFeatures ? "NEW" : undefined
+    // },
     {
       name: t.projects,
       icon: <Folder className="h-5 w-5" />,
@@ -569,12 +623,12 @@ const Sidebar = () => {
           color: "text-green-600",
           badge: activeProjects > 0 ? activeProjects : undefined
         },
-        {
-          name: t.clients || "고객사",
-          path: "/clients",
-          icon: <Briefcase className="h-4 w-4" />,
-          color: "text-blue-600"
-        },
+        // {
+        //   name: t.clients || "고객사",
+        //   path: "/clients",
+        //   icon: <Briefcase className="h-4 w-4" />,
+        //   color: "text-blue-600"
+        // },
       ],
     },
     {
@@ -691,10 +745,8 @@ const Sidebar = () => {
     
     // 기타 경로에 대한 매핑
     const pathMap: Record<string, string> = {
-      "/": t.dashboard || "대시보드",
-      "/dashboard": t.dashboard || "대시보드",
+      "/": t.projects || "프로젝트",
       "/projects": t.projects || "프로젝트",
-      "/clients": t.clients || "고객사",
       "/tasks": t.taskManagement || "업무 관리",
       "/tasks/journal": t.taskJournal || "업무 일지",
       "/tasks/journal-list": t.taskJournalList || "업무 일지 목록",

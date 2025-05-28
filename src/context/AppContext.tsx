@@ -114,6 +114,15 @@ export interface ExtendedAppContextType {
   getUserNameById: (userId: string | null | undefined) => string;
   getUserById: (userId: string | null | undefined) => (User | Manager) | null;
   getAssigneeNames: (task: Task) => string;
+  getIntegratedAssignees: () => Array<{
+    id: string;
+    name: string;
+    email: string;
+    department: string;
+    role: string;
+    type: 'user' | 'manager';
+    avatar?: string;
+  }>;
 }
 
 export const AppContext = createContext<ExtendedAppContextType>({} as ExtendedAppContextType);
@@ -199,6 +208,42 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return null;
+  };
+
+  // 통합된 담당자 목록 (사용자 + 담당자, 이메일 기준 중복 제거)
+  const getIntegratedAssignees = () => {
+    const emailMap = new Map();
+    
+    // 사용자 먼저 추가 (우선순위)
+    usersList.forEach(user => {
+      if (user.email && user.isActive !== false) {
+        emailMap.set(user.email, {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          department: typeof user.department === 'string' ? user.department : '',
+          role: user.role || 'user',
+          type: 'user',
+          avatar: user.avatar
+        });
+      }
+    });
+    
+    // 담당자 추가 (이메일이 중복되지 않는 경우만)
+    managers.forEach(manager => {
+      if (manager.email && !emailMap.has(manager.email)) {
+        emailMap.set(manager.email, {
+          id: manager.id,
+          name: manager.name,
+          email: manager.email,
+          department: manager.department?.name || '',
+          role: 'manager',
+          type: 'manager'
+        });
+      }
+    });
+    
+    return Array.from(emailMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   };
 
   // 다중 담당자 이름 포맷팅 함수
@@ -2277,6 +2322,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   getUserNameById,
   getUserById,
   getAssigneeNames,
+  getIntegratedAssignees,
   };
 
   return (

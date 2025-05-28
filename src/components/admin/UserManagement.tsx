@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserPlus, Globe, Building, Key, Edit, Plus } from "lucide-react";
+import { UserPlus, Globe, Building, Key, Edit, Plus, RefreshCw, Users, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { getDepartmentKoreanName } from "@/utils/departmentUtils";
 import { UserEditDialog } from "./UserEditDialog";
 import { PasswordResetDialog } from "./PasswordResetDialog";
@@ -101,6 +101,8 @@ export const UserManagement = ({ initialUsers = [] }: UserManagementProps) => {
   });
 
   const [passwordResetMode, setPasswordResetMode] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<any[]>([]);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
 
   const countries: CountryInfo[] = [
     { code: "KR", name: "한국" },
@@ -133,6 +135,7 @@ export const UserManagement = ({ initialUsers = [] }: UserManagementProps) => {
     fetchDepartments();
     fetchPositions();
     fetchCorporations();
+    fetchSyncStatus();
   }, []);
 
   const fetchUsers = async () => {
@@ -224,6 +227,47 @@ export const UserManagement = ({ initialUsers = [] }: UserManagementProps) => {
       toast({
         title: "에러",
         description: "법인 목록을 불러오는데 실패했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchSyncStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_manager_sync_status")
+        .select("*")
+        .order("user_email");
+
+      if (error) throw error;
+      console.log("Fetched sync status data:", data);
+      setSyncStatus(data || []);
+    } catch (error) {
+      console.error("Error fetching sync status:", error);
+      // 뷰가 없을 수 있으므로 에러를 무시
+    }
+  };
+
+  const syncUsersManagers = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('sync_existing_users_managers');
+
+      if (error) throw error;
+      
+      toast({
+        title: "동기화 완료",
+        description: data || "사용자와 담당자 정보가 동기화되었습니다.",
+      });
+      
+      // 데이터 새로고침
+      await fetchUsers();
+      await fetchSyncStatus();
+    } catch (error) {
+      console.error("Error syncing users and managers:", error);
+      toast({
+        title: "동기화 실패",
+        description: "사용자와 담당자 동기화 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     }
@@ -415,13 +459,33 @@ export const UserManagement = ({ initialUsers = [] }: UserManagementProps) => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>사용자 관리</CardTitle>
-            <Button size="sm" onClick={handleModalOpen}>
-              <Plus className="mr-2 h-4 w-4" />
-              새 사용자
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowSyncDialog(true)}
+                className="flex items-center gap-2"
+              >
+                <Users className="h-4 w-4" />
+                담당자 연동 상태
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={syncUsersManagers}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                동기화
+              </Button>
+              <Button size="sm" onClick={handleModalOpen}>
+                <Plus className="mr-2 h-4 w-4" />
+                새 사용자
+              </Button>
+            </div>
           </div>
           <CardDescription>
-            시스템 사용자 계정을 생성하고 관리합니다.
+            시스템 사용자 계정을 생성하고 관리합니다. 이메일 기준으로 담당자와 자동 연동됩니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -503,40 +567,59 @@ export const UserManagement = ({ initialUsers = [] }: UserManagementProps) => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>사용자 이름</TableHead>
+                    <TableHead>이메일</TableHead>
                     <TableHead>부서</TableHead>
                     <TableHead>법인</TableHead>
-                    <TableHead>국가</TableHead>
-                    <TableHead>직책</TableHead>
+                    <TableHead>담당자 연동</TableHead>
                     <TableHead className="text-right">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.length > 0 ? (
-                    filteredUsers.map((user: any) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>
-                          {user.department?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {user.corporation?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {countries.find(c => c.code === user.country)?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {user.position?.name || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
-                              <Edit className="h-4 w-4" />
-                              편집
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredUsers.map((user: any) => {
+                      const userSyncStatus = syncStatus.find(s => s.user_email === user.email);
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.name}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                          <TableCell>
+                            {user.department?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {user.corporation?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {userSyncStatus ? (
+                                <>
+                                  {userSyncStatus.sync_status === '연동됨' ? (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  ) : userSyncStatus.sync_status === '담당자 없음' ? (
+                                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                  )}
+                                  <span className="text-sm">{userSyncStatus.sync_status}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="h-4 w-4 text-gray-400" />
+                                  <span className="text-sm text-muted-foreground">확인 중</span>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
+                                <Edit className="h-4 w-4" />
+                                편집
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center">
@@ -736,6 +819,135 @@ export const UserManagement = ({ initialUsers = [] }: UserManagementProps) => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 동기화 상태 다이얼로그 */}
+      <Dialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              사용자-담당자 연동 상태
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                이메일 기준으로 사용자와 담당자 연동 상태를 확인할 수 있습니다.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fetchSyncStatus}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                새로고침
+              </Button>
+            </div>
+
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>사용자 이름</TableHead>
+                    <TableHead>이메일</TableHead>
+                    <TableHead>사용자 부서</TableHead>
+                    <TableHead>담당자 이름</TableHead>
+                    <TableHead>연동 상태</TableHead>
+                    <TableHead>이름 일치</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {syncStatus.length > 0 ? (
+                    syncStatus.map((status, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          {status.user_name || '-'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {status.user_email || status.manager_email}
+                        </TableCell>
+                        <TableCell>
+                          {status.user_department_name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {status.manager_name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {status.sync_status === '연동됨' ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : status.sync_status === '담당자 없음' ? (
+                              <AlertCircle className="h-4 w-4 text-yellow-500" />
+                            ) : status.sync_status === '사용자 없음' ? (
+                              <XCircle className="h-4 w-4 text-blue-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            )}
+                            <span className="text-sm">{status.sync_status}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {status.name_match_status === '일치' ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : status.name_match_status === '불일치' ? (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-gray-400" />
+                            )}
+                            <span className="text-sm">{status.name_match_status}</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        동기화 상태 정보가 없습니다
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-sm">연동됨</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <span className="text-sm">담당자 없음</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-blue-500" />
+                <span className="text-sm">사용자 없음</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm">연동 불가</span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={syncUsersManagers}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              전체 동기화 실행
+            </Button>
+            <Button onClick={() => setShowSyncDialog(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
