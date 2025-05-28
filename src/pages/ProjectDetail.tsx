@@ -241,6 +241,31 @@ const ProjectDetail = () => {
     return "-";
   };
 
+  // 담당자 이름 가져오기 함수 추가
+  const getAssigneeName = (assignedTo: string | undefined) => {
+    if (!assignedTo) return "미지정";
+    
+    // 사용자, 직원, 매니저에서 모두 찾기
+    const user = users.find(user => user.id === assignedTo);
+    if (user) return user.name;
+    
+    const employee = employees.find(emp => emp.id === assignedTo);
+    if (employee) return employee.name;
+    
+    const manager = managers.find(mgr => mgr.id === assignedTo);
+    if (manager) return manager.name;
+    
+    return assignedTo; // UUID 그대로 반환하지 않고 "미지정"으로 처리
+  };
+
+  // 부서 이름 가져오기 함수 추가
+  const getDepartmentName = (departmentId: string | undefined) => {
+    if (!departmentId) return "-";
+    
+    const department = departments.find(dept => dept.id === departmentId);
+    return department ? department.name : "-";
+  };
+
   const handlePDFClick = (file: ProjectFile) => {
     setSelectedPDF(file);
     setIsPDFViewerOpen(true);
@@ -840,7 +865,7 @@ const ProjectDetail = () => {
                                 </div>
                                 <div className="ml-2">
                                   <div className="text-sm font-medium text-gray-900">
-                                    {task.assignedTo || '미지정'}
+                                    {getAssigneeName(task.assignedTo)}
                                   </div>
                                 </div>
                               </div>
@@ -848,7 +873,7 @@ const ProjectDetail = () => {
                             
                             {/* 부서 */}
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {task.department || '-'}
+                              {getDepartmentName(task.department)}
                             </td>
                             
                             {/* Due Date */}
