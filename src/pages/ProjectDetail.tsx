@@ -61,6 +61,7 @@ const ProjectDetail = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDateInfo, setShowDateInfo] = useState(false);
   const [showProjectSummary, setShowProjectSummary] = useState(false);
+  const [showProperties, setShowProperties] = useState(false);
   
   const t = translations.projects;
   const globalT = translations.global;
@@ -601,105 +602,99 @@ const ProjectDetail = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* 날짜 정보 - 토글 가능 */}
-        <div className="bg-gray-50 rounded-lg p-6">
-          <div 
-            className="flex items-center justify-between cursor-pointer"
-            onClick={() => setShowDateInfo(!showDateInfo)}
-          >
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-green-600" />
-              날짜 정보
-            </h3>
-            <Button variant="ghost" size="sm">
-              {showDateInfo ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
           
-          {showDateInfo && (
-            <div className="mt-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-600">시작일:</span>
-                <span className="font-medium">{formatDate(project.startDate)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-600">마감일:</span>
-                <span className="font-medium">{formatDate(project.dueDate)}</span>
-              </div>
-              {project.requestDate && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">요청일:</span>
-                  <span className="font-medium">{formatDate(project.requestDate)}</span>
-                </div>
-              )}
-              {project.targetSOPDate && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">목표 양산일:</span>
-                  <span className="font-medium">{formatDate(project.targetSOPDate)}</span>
-                </div>
-              )}
+          {/* 속성 토글 */}
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowProperties(!showProperties)}
+            >
+              <h4 className="text-md font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-gray-600" />
+                속성
+              </h4>
+              <Button variant="ghost" size="sm">
+                {showProperties ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-          )}
-        </div>
+            
+            {showProperties && (
+              <div className="mt-4 space-y-6">
+                {/* 날짜 정보 */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h5 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-green-600" />
+                    날짜 정보
+                  </h5>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">시작일:</span>
+                      <span className="text-sm font-medium">{formatDate(project.startDate)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">마감일:</span>
+                      <span className="text-sm font-medium">{formatDate(project.dueDate)}</span>
+                    </div>
+                    {project.requestDate && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-600">요청일:</span>
+                        <span className="text-sm font-medium">{formatDate(project.requestDate)}</span>
+                      </div>
+                    )}
+                    {project.targetSOPDate && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-600">목표 양산일:</span>
+                        <span className="text-sm font-medium">{formatDate(project.targetSOPDate)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-        {/* 프로젝트 요약 - 토글 가능 */}
-        <div className="bg-gray-50 rounded-lg p-6">
-          <div 
-            className="flex items-center justify-between cursor-pointer"
-            onClick={() => setShowProjectSummary(!showProjectSummary)}
-          >
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <BarChart className="h-5 w-5 text-purple-600" />
-              프로젝트 요약
-            </h3>
-            <Button variant="ghost" size="sm">
-              {showProjectSummary ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-          
-          {showProjectSummary && (
-            <div className="mt-4 space-y-4">
-              {project.dueDate && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">남은 기간:</span>
-                  <span className="font-medium">
-                    {(() => {
-                      const today = new Date();
-                      const dueDate = new Date(project.dueDate);
-                      const diffTime = dueDate.getTime() - today.getTime();
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      
-                      if (diffDays < 0) {
-                        return <span className="text-red-600 font-bold">{Math.abs(diffDays)}일 지연</span>;
-                      } else if (diffDays === 0) {
-                        return <span className="text-orange-600 font-bold">오늘 마감</span>;
-                      } else {
-                        return <span className="text-blue-600 font-bold">{diffDays}일 남음</span>;
-                      }
-                    })()}
-                  </span>
+                {/* 프로젝트 요약 */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h5 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                    <BarChart className="h-4 w-4 text-purple-600" />
+                    프로젝트 요약
+                  </h5>
+                  <div className="space-y-3">
+                    {project.dueDate && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-600">남은 기간:</span>
+                        <span className="text-sm font-medium">
+                          {(() => {
+                            const today = new Date();
+                            const dueDate = new Date(project.dueDate);
+                            const diffTime = dueDate.getTime() - today.getTime();
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays < 0) {
+                              return <span className="text-red-600 font-bold">{Math.abs(diffDays)}일 지연</span>;
+                            } else if (diffDays === 0) {
+                              return <span className="text-orange-600 font-bold">오늘 마감</span>;
+                            } else {
+                              return <span className="text-blue-600 font-bold">{diffDays}일 남음</span>;
+                            }
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">하위 업무:</span>
+                      <span className="text-sm font-medium">{subtaskStats.total}개</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">완료된 업무:</span>
+                      <span className="text-sm font-medium text-green-600">{subtaskStats.completed}개</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-600">하위 업무:</span>
-                <span className="font-medium">{subtaskStats.total}개</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-600">완료된 업무:</span>
-                <span className="font-medium text-green-600">{subtaskStats.completed}개</span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* 하위 업무 목록 */}
