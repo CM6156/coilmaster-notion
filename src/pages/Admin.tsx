@@ -34,27 +34,45 @@ import PositionsManagement from "@/components/admin/PositionsManagement";
 import CorporationsManagement from "@/components/admin/CorporationsManagement";
 import StatusManagement from "@/components/admin/StatusManagement";
 import PhaseManagement2 from "@/components/admin/PhaseManagement2";
+import PopupManagement from "@/components/admin/PopupManagement";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 
 const Admin = () => {
-  const { users, clients, projects, tasks } = useAppContext();
+  const { users, clients, projects, tasks, currentUser } = useAppContext();
   const { translations } = useLanguage();
   const [activeTab, setActiveTab] = useState("users");
+  
+  // 현재 사용자 역할 확인
+  const userRole = currentUser?.role || 'user';
+  
+  // 역할 확인 함수
+  const isAdmin = userRole === 'admin';
+  const isManager = userRole === 'manager';
+  const isUser = userRole === 'user';
 
-  const tabs = [
-    { value: "users", label: translations.global?.userManagement || "사용자", icon: Users, gradient: "from-blue-500 to-purple-500" },
-    { value: "employees", label: translations.global?.employeeManagement || "직원", icon: UserCheck, gradient: "from-purple-500 to-pink-500" },
-    { value: "managers", label: translations.global?.managerManagement || "담당자", icon: UserCog, gradient: "from-pink-500 to-red-500" },
-    { value: "departments", label: translations.global?.departmentManagement || "부서", icon: Building2, gradient: "from-orange-500 to-yellow-500" },
-    { value: "positions", label: translations.global?.positionManagement || "직책", icon: Award, gradient: "from-yellow-500 to-green-500" },
-    { value: "corporations", label: translations.global?.corporationManagement || "법인", icon: Globe, gradient: "from-green-500 to-teal-500" },
-    { value: "clients", label: translations.global?.clientManagement || "고객사", icon: Briefcase, gradient: "from-teal-500 to-blue-500" },
-    { value: "status", label: translations.global?.statusManagement || "상태", icon: Palette, gradient: "from-indigo-500 to-purple-500" },
-    { value: "data", label: translations.global?.dataManagement || "데이터", icon: Database, gradient: "from-purple-500 to-pink-500" },
-    { value: "settings", label: translations.global?.settingsManagement || "설정", icon: Settings, gradient: "from-gray-500 to-gray-700" },
-    { value: "phase", label: translations.global?.phaseManagement || "프로젝트 단계", icon: Layers, gradient: "from-teal-500 to-blue-500" }
+  const allTabs = [
+    { value: "users", label: translations.global?.userManagement || "사용자", icon: Users, gradient: "from-blue-500 to-purple-500", adminOnly: true },
+    { value: "employees", label: translations.global?.employeeManagement || "직원", icon: UserCheck, gradient: "from-purple-500 to-pink-500", managerAccess: true },
+    { value: "managers", label: translations.global?.managerManagement || "담당자", icon: UserCog, gradient: "from-pink-500 to-red-500", managerAccess: true },
+    { value: "departments", label: translations.global?.departmentManagement || "부서", icon: Building2, gradient: "from-orange-500 to-yellow-500", managerAccess: true },
+    { value: "positions", label: translations.global?.positionManagement || "직책", icon: Award, gradient: "from-yellow-500 to-green-500", managerAccess: true },
+    { value: "corporations", label: translations.global?.corporationManagement || "법인", icon: Globe, gradient: "from-green-500 to-teal-500", adminOnly: true },
+    { value: "clients", label: translations.global?.clientManagement || "고객사", icon: Briefcase, gradient: "from-teal-500 to-blue-500", adminOnly: true },
+    { value: "popup", label: "팝업창", icon: FolderOpen, gradient: "from-cyan-500 to-blue-500", adminOnly: true },
+    { value: "status", label: translations.global?.statusManagement || "상태", icon: Palette, gradient: "from-indigo-500 to-purple-500", managerAccess: true },
+    { value: "data", label: translations.global?.dataManagement || "데이터", icon: Database, gradient: "from-purple-500 to-pink-500", adminOnly: true },
+    { value: "settings", label: translations.global?.settingsManagement || "설정", icon: Settings, gradient: "from-gray-500 to-gray-700", adminOnly: true },
+    { value: "phase", label: translations.global?.phaseManagement || "프로젝트 단계", icon: Layers, gradient: "from-teal-500 to-blue-500", managerAccess: true }
   ];
+
+  // 역할별 탭 필터링
+  const tabs = allTabs.filter(tab => {
+    if (isAdmin) return true; // 관리자는 모든 탭 접근 가능
+    if (isManager && tab.managerAccess) return true; // 매니저는 managerAccess가 있는 탭만
+    if (isManager && !tab.adminOnly && !tab.managerAccess) return true; // 매니저는 adminOnly가 아닌 탭도 접근 가능
+    return false; // 일반 사용자는 접근 불가
+  });
 
   const stats = [
     { 
@@ -90,6 +108,24 @@ const Admin = () => {
   const getCurrentTab = () => {
     return tabs.find(tab => tab.value === activeTab) || tabs[0];
   };
+
+  // 권한이 없는 사용자는 접근 차단
+  if (isUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-10 h-10 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">접근 권한이 없습니다</h1>
+          <p className="text-gray-600 mb-4">관리자 패널은 관리자 또는 매니저만 접근할 수 있습니다.</p>
+          <Button onClick={() => window.history.back()} variant="outline">
+            이전 페이지로 돌아가기
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
@@ -207,6 +243,7 @@ const Admin = () => {
                     {activeTab === 'positions' && '직책 정보를 관리합니다'}
                     {activeTab === 'corporations' && '법인 정보를 관리합니다'}
                     {activeTab === 'clients' && '고객사 정보를 관리합니다'}
+                    {activeTab === 'popup' && '사용자에게 표시될 팝업창을 관리합니다'}
                     {activeTab === 'status' && '프로젝트 및 업무 상태를 관리합니다'}
                     {activeTab === 'data' && '시스템 데이터를 관리합니다'}
                     {activeTab === 'settings' && '시스템 설정을 관리합니다'}
@@ -237,6 +274,9 @@ const Admin = () => {
                 
                 {/* 고객사 관리 */}
                 {activeTab === 'clients' && <ClientManagement clients={clients} projects={projects} />}
+                
+                {/* 팝업창 관리 */}
+                {activeTab === 'popup' && <PopupManagement />}
                 
                 {/* 상태 관리 */}
                 {activeTab === 'status' && <StatusManagement />}

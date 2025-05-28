@@ -79,7 +79,7 @@ const ProjectDetailsDialog = ({
   onOpenChange,
 }: ProjectDetailsDialogProps) => {
   const { translations } = useLanguage();
-  const { projects, users, tasks, departments, updateProject, clients, employees, managers, phases, calculateProjectProgress, deleteProject } = useAppContext();
+  const { projects, users, tasks, departments, updateProject, clients, employees, managers, phases, calculateProjectProgress, deleteProject, currentUser } = useAppContext();
   const { toast } = useToast();
   const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -94,6 +94,10 @@ const ProjectDetailsDialog = ({
   
   const t = translations.projects;
   const globalT = translations.global;
+
+  // 권한 확인
+  const userRole = currentUser?.role || 'user';
+  const canDelete = userRole === 'admin' || userRole === 'manager';
   
   // 실제 프로젝트 파일들을 데이터베이스에서 가져오기
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([]);
@@ -662,48 +666,52 @@ const ProjectDetailsDialog = ({
               </DialogTitle>
               
               <div className="flex items-center gap-2">
-                {!showDeleteConfirm ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    삭제
-                  </Button>
-                ) : (
-                  <div className="flex flex-col gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-3 rounded-lg border border-red-200 dark:border-red-800">
-                    <span className="text-sm text-red-700 dark:text-red-300 font-medium">정말 삭제하시겠습니까?</span>
-                    {projectTasks.length > 0 && (
-                      <span className="text-xs text-red-600 dark:text-red-400">
-                        ⚠️ 관련 업무 {projectTasks.length}개도 함께 삭제됩니다.
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDelete}
-                        disabled={isDeleting}
-                        className="h-8 px-3"
-                      >
-                        {isDeleting ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          "삭제"
-                        )}
-                      </Button>
+                {canDelete && (
+                  <>
+                    {!showDeleteConfirm ? (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setShowDeleteConfirm(false)}
-                        className="h-8 px-3"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                       >
-                        취소
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        삭제
                       </Button>
-                    </div>
-                  </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <span className="text-sm text-red-700 dark:text-red-300 font-medium">정말 삭제하시겠습니까?</span>
+                        {projectTasks.length > 0 && (
+                          <span className="text-xs text-red-600 dark:text-red-400">
+                            ⚠️ 관련 업무 {projectTasks.length}개도 함께 삭제됩니다.
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="h-8 px-3"
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "삭제"
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="h-8 px-3"
+                          >
+                            취소
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

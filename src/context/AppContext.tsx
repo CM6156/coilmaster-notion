@@ -395,6 +395,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             console.log('users 테이블에서 사용자 정보 찾음:', userData);
             setCurrentUser(userData);
             
+            // 사용자 온라인 상태로 업데이트
+            try {
+              const { error: onlineError } = await supabase
+                .from('users')
+                .update({
+                  is_online: true,
+                  last_seen: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  current_page: '대시보드'
+                })
+                .eq('id', user.id);
+              
+              if (onlineError) {
+                console.error('온라인 상태 업데이트 오류:', onlineError);
+              } else {
+                console.log('✅ 사용자 온라인 상태로 변경 완료');
+              }
+            } catch (onlineUpdateError) {
+              console.error('온라인 상태 업데이트 중 오류:', onlineUpdateError);
+            }
+            
             // localStorage에 currentUser 백업
             localStorage.setItem("currentUser", JSON.stringify(userData));
             localStorage.setItem("lastUserLogin", new Date().toISOString());

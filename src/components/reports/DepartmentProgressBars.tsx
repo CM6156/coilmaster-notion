@@ -38,11 +38,11 @@ export function DepartmentProgressBars({ tasksByDepartmentData, totalTasks }: De
                 className={cn("w-3 h-3 rounded-full mr-2", 
                   progressBarColors[item.department] || "bg-gray-400")} 
               />
-              <span>{item.name}</span>
+              <span className="text-gray-900 dark:text-gray-100">{item.name}</span>
             </div>
-            <span className="font-medium">{item.value}개</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{item.value}개</span>
           </div>
-          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div 
               className={cn("h-full rounded-full", 
                 progressBarColors[item.department] || "bg-gray-400")} 

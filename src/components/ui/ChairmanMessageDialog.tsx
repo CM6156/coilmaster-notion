@@ -8,23 +8,92 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { X, Crown, Sparkles, Quote, Star, Building2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface ChairmanMessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface PopupData {
+  id: string;
+  title: string;
+  subtitle?: string;
+  content?: string;
+  image_url?: string;
+  image_alt?: string;
+  button_text: string;
+  background_gradient: string;
+}
+
 const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProps) => {
   const [dontShowToday, setDontShowToday] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [popupData, setPopupData] = useState<PopupData | null>(null);
 
   useEffect(() => {
     if (open) {
       setTimeout(() => setIsVisible(true), 100);
+      fetchPopupData();
     } else {
       setIsVisible(false);
     }
   }, [open]);
+
+  // 활성 팝업 데이터 가져오기
+  const fetchPopupData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('popup_settings')
+        .select('*')
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error fetching popup data:', error);
+        return;
+      }
+
+      if (data) {
+        setPopupData({
+          id: data.id,
+          title: data.title,
+          subtitle: data.subtitle,
+          content: data.content,
+          image_url: data.image_url,
+          image_alt: data.image_alt,
+          button_text: data.button_text,
+          background_gradient: data.background_gradient
+        });
+        
+        // 팝업 표시 로그 기록
+        logPopupAction(data.id, 'shown');
+      }
+    } catch (error) {
+      console.error('Error in fetchPopupData:', error);
+    }
+  };
+
+  // 팝업 액션 로그 기록
+  const logPopupAction = async (popupId: string, action: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('popup_display_logs')
+          .insert({
+            popup_id: popupId,
+            user_id: user.id,
+            action: action,
+            session_id: `session_${Date.now()}`
+          });
+      }
+    } catch (error) {
+      console.error('Error logging popup action:', error);
+    }
+  };
 
   // 오늘 날짜를 YYYY-MM-DD 형식으로 가져오기
   const getTodayString = () => {
@@ -37,7 +106,15 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
     if (dontShowToday) {
       // 로컬 스토리지에 오늘 날짜 저장
       localStorage.setItem('chairmanMessageHidden', getTodayString());
+      // 로그 기록
+      if (popupData) {
+        logPopupAction(popupData.id, 'dont_show_today');
+      }
+    } else if (popupData) {
+      // 일반 닫기 로그 기록
+      logPopupAction(popupData.id, 'closed');
     }
+    
     setIsVisible(false);
     setTimeout(() => onOpenChange(false), 300);
   };
@@ -66,7 +143,7 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
 
         {/* 헤더 섹션 */}
         <DialogHeader className="p-0 flex-shrink-0 relative z-10">
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 p-6 relative overflow-hidden">
+          <div className={`bg-gradient-to-r ${popupData?.background_gradient || 'from-blue-600 via-purple-600 to-blue-600'} p-6 relative overflow-hidden`}>
             {/* 헤더 배경 패턴 */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%227%22%20cy%3D%227%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%227%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%227%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%227%22%20cy%3D%2227%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2227%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2227%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%227%22%20cy%3D%2247%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2247%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2247%22%20r%3D%221%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse"></div>
@@ -79,10 +156,12 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
                 </div>
                 <div>
                   <DialogTitle className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
-                    회장님의 말씀
+                    {popupData?.title || '회장님의 말씀'}
                     <Sparkles className="h-6 w-6 text-yellow-300 animate-spin" />
                   </DialogTitle>
-                  <p className="text-blue-100 text-sm font-medium">CoilMaster Chairman's Message</p>
+                  <p className="text-blue-100 text-sm font-medium">
+                    {popupData?.subtitle || 'CoilMaster Chairman\'s Message'}
+                  </p>
                 </div>
               </div>
               
@@ -111,13 +190,17 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
               <Quote className="h-8 w-8 text-blue-500/30 transform rotate-180" />
             </div>
             <div className="bg-white/80 dark:bg-white/20 backdrop-blur-md rounded-2xl p-6 border border-white/60 shadow-xl">
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-                <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                코일마스터의 비전
-              </h3>
-              <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed italic font-medium">
-                "혁신적인 기술로 글로벌 시장을 선도하며, 고객과 함께 성장하는 기업이 되겠습니다."
-              </p>
+              {popupData?.content && (
+                <>
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                    <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    {popupData.title}
+                  </h3>
+                  <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed italic font-medium">
+                    "{popupData.content}"
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -128,13 +211,19 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500"></div>
               
               {/* 실제 이미지 */}
-              <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/60 shadow-2xl">
-                <img
-                  src="/코일마스터_스티커디자인_0523_emb5.jpg"
-                  alt="코일마스터 스티커 디자인"
-                  className="w-full max-w-[350px] h-[280px] object-contain rounded-xl shadow-lg border border-gray-200 dark:border-gray-600 transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
+              {popupData?.image_url && (
+                <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/60 shadow-2xl">
+                  <img
+                    src={popupData.image_url}
+                    alt={popupData.image_alt || '팝업 이미지'}
+                    className="w-full max-w-[350px] h-[280px] object-contain rounded-xl shadow-lg border border-gray-200 dark:border-gray-600 transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      console.error('팝업 이미지 로드 실패:', popupData.image_url);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
 
               {/* 장식 별들 */}
               <Star className="absolute -top-3 -right-3 h-6 w-6 text-yellow-400 animate-pulse" />
@@ -143,18 +232,7 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
             </div>
           </div>
 
-          {/* 3. 슬로건 텍스트 - 이미지 바로 아래 */}
-          <div className="relative">
-            <div className="bg-white/90 dark:bg-white/20 backdrop-blur-md rounded-2xl p-6 border-2 border-white/70 shadow-2xl">
-              <h4 className="text-xl font-bold text-gray-800 dark:text-white mb-4 text-center">
-                "Move Fast, Break Things"
-              </h4>
-              <p className="text-gray-700 dark:text-gray-300 text-base text-center italic leading-relaxed font-medium">
-                빠르게 움직이고, 기존의 틀을 깨뜨려라.<br/>
-                혁신은 안전지대를 벗어날 때 시작됩니다.
-              </p>
-            </div>
-          </div>
+
 
         </div>
 
@@ -183,10 +261,10 @@ const ChairmanMessageDialog = ({ open, onOpenChange }: ChairmanMessageDialogProp
             {/* 확인 버튼 */}
             <Button
               onClick={handleClose}
-              className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 hover:from-blue-700 hover:via-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] border border-white/20"
+              className={`w-full bg-gradient-to-r ${popupData?.background_gradient || 'from-blue-600 via-purple-600 to-blue-600'} hover:opacity-90 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] border border-white/20`}
             >
               <span className="flex items-center justify-center gap-2">
-                확인
+                {popupData?.button_text || '확인'}
                 <Sparkles className="h-4 w-4 animate-pulse" />
               </span>
             </Button>

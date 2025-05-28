@@ -68,7 +68,7 @@ interface TaskDetailDialogProps {
 }
 
 export const TaskDetailDialog = ({ task, open, onOpenChange, onTaskUpdated }: TaskDetailDialogProps) => {
-  const { users, managers, updateTask, deleteTask, getTaskStatuses, getPriorityStatuses, getUserById, getAssigneeNames } = useAppContext();
+  const { users, managers, updateTask, deleteTask, getTaskStatuses, getPriorityStatuses, getUserById, getAssigneeNames, currentUser } = useAppContext();
   const { translations } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
@@ -92,6 +92,10 @@ export const TaskDetailDialog = ({ task, open, onOpenChange, onTaskUpdated }: Ta
   const assignee = getUserById(task.assignedTo);
   const assigneeNames = getAssigneeNames(task);
 
+  // 권한 확인
+  const userRole = currentUser?.role || 'user';
+  const canDelete = userRole === 'admin' || userRole === 'manager';
+  
   // 본인이 올린 업무인지 확인 (모든 사용자가 업무 상태를 변경할 수 있도록 수정)
   const isOwnTask = true; // 임시로 모든 사용자가 상태 변경 가능하도록 설정
 
@@ -409,13 +413,15 @@ export const TaskDetailDialog = ({ task, open, onOpenChange, onTaskUpdated }: Ta
                         <Edit className="h-4 w-4 mr-2" />
                         수정
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setIsDeleteDialogOpen(true)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        삭제
-                      </DropdownMenuItem>
+                      {canDelete && (
+                        <DropdownMenuItem 
+                          onClick={() => setIsDeleteDialogOpen(true)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          삭제
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}

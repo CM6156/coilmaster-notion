@@ -90,7 +90,7 @@ const TasksByDepartment = () => {
         <h2 className="text-xl font-semibold">
           {t?.tasksByDepartment || '부서별 업무 현황'}
         </h2>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
           총 {taskList.length}개 업무
         </div>
       </div>
@@ -104,7 +104,7 @@ const TasksByDepartment = () => {
           />
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <p className="text-lg mb-2">부서별 업무 데이터가 없습니다</p>
           <p className="text-sm">업무를 생성하면 여기에 표시됩니다</p>
         </div>

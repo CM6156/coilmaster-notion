@@ -104,7 +104,7 @@ export default function Register() {
             department: data.department,
             position: data.position
           },
-          emailRedirectTo: window.location.origin + '/login'
+          emailRedirectTo: `${window.location.origin}/login`
         }
       });
       

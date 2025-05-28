@@ -134,17 +134,17 @@ const StaffProjectOverview = () => {
     const getStatusConfig = (status: string) => {
       switch (status) {
         case 'completed':
-          return { color: 'bg-green-100 text-green-700', icon: CheckCircle2, text: projectsT?.statusCompleted || '완료' };
+          return { color: 'bg-green-900/20 text-green-400 border-green-800', icon: CheckCircle2, text: projectsT?.statusCompleted || '완료' };
         case 'in-progress':
-          return { color: 'bg-blue-100 text-blue-700', icon: Clock3, text: projectsT?.statusActive || '진행중' };
+          return { color: 'bg-blue-900/20 text-blue-400 border-blue-800', icon: Clock3, text: projectsT?.statusActive || '진행중' };
         case 'delayed':
-          return { color: 'bg-red-100 text-red-700', icon: AlertCircle, text: projectsT?.statusDelayed || '지연' };
+          return { color: 'bg-red-900/20 text-red-400 border-red-800', icon: AlertCircle, text: projectsT?.statusDelayed || '지연' };
         case 'on-hold':
-          return { color: 'bg-amber-100 text-amber-700', icon: Ban, text: projectsT?.statusOnHold || '보류' };
+          return { color: 'bg-amber-900/20 text-amber-400 border-amber-800', icon: Ban, text: projectsT?.statusOnHold || '보류' };
         case 'planned':
-          return { color: 'bg-gray-100 text-gray-700', icon: ClockIcon, text: t?.planned || '예정' };
+          return { color: 'bg-gray-800/20 text-gray-400 border-gray-700', icon: ClockIcon, text: t?.planned || '예정' };
         default:
-          return { color: 'bg-gray-100 text-gray-700', icon: ClockIcon, text: t?.unset || '미정' };
+          return { color: 'bg-gray-800/20 text-gray-400 border-gray-700', icon: ClockIcon, text: t?.unset || '미정' };
       }
     };
 
@@ -153,7 +153,7 @@ const StaffProjectOverview = () => {
 
     return (
       <div className={cn(
-        "inline-flex items-center px-2 py-1 rounded-md text-sm font-medium",
+        "inline-flex items-center px-2 py-1 rounded-md text-sm font-medium border",
         config.color
       )}>
         <IconComponent className="w-3 h-3 mr-1" />
@@ -455,13 +455,13 @@ const StaffProjectOverview = () => {
                       <>
                         <TableCell 
                           rowSpan={totalRows}
-                          className="font-medium border-r bg-gray-50"
+                          className="font-medium border-r bg-gray-50 dark:bg-gray-800/50"
                         >
                           <div className="flex items-center gap-2">
-                            <UserIcon className="w-4 h-4" />
+                            <UserIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             <Button
                               variant="link"
-                              className="p-0 h-auto font-medium text-blue-600 hover:text-blue-800"
+                              className="p-0 h-auto font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                               onClick={() => handleStaffClick(staff.staffId, staff.staffName)}
                             >
                               {staff.staffName}
@@ -470,10 +470,10 @@ const StaffProjectOverview = () => {
                         </TableCell>
                         <TableCell 
                           rowSpan={totalRows}
-                          className="border-r bg-gray-50"
+                          className="border-r bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300"
                         >
                           <div className="flex items-center gap-2">
-                            <BuildingIcon className="w-4 h-4" />
+                            <BuildingIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             {staff.department}
                           </div>
                         </TableCell>
@@ -493,7 +493,7 @@ const StaffProjectOverview = () => {
                         )}
                         <span>{project.name}</span>
                         {projectTasks.length > 0 && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-gray-300 bg-gray-100 text-gray-600 dark:border-gray-600 dark:bg-gray-800/30 dark:text-gray-300">
                             {projectTasks.length}개 업무
                           </Badge>
                         )}
@@ -501,8 +501,8 @@ const StaffProjectOverview = () => {
                     </TableCell>
                     <TableCell>{project.clientName}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <CalendarIcon className="w-3 h-3" />
+                      <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                        <CalendarIcon className="w-3 h-3 text-gray-400" />
                         {formatDate(project.startDate)} ~ {formatDate(project.dueDate)}
                       </div>
                     </TableCell>
@@ -510,7 +510,7 @@ const StaffProjectOverview = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={project.progress} className="w-16" />
-                        <span className="text-sm text-gray-500 min-w-[2rem]">
+                        <span className="text-sm text-gray-500 dark:text-gray-400 min-w-[2rem]">
                           {project.progress}%
                         </span>
                       </div>
@@ -520,24 +520,24 @@ const StaffProjectOverview = () => {
                 
                 // 하위 업무 행들
                 const taskRows = isExpanded ? projectTasks.map((task, taskIndex) => (
-                  <TableRow key={`${staff.staffId}-${project.id}-task-${task.id}`} className="bg-blue-50/30">
+                  <TableRow key={`${staff.staffId}-${project.id}-task-${task.id}`} className="bg-blue-50/50 dark:bg-gray-800/30">
                     <TableCell className="pl-8">
                       <div className="flex items-center gap-2 text-sm">
-                        <ListTodo className="h-3 w-3 text-gray-500" />
+                        <ListTodo className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                         <span 
                           className="inline-block w-2 h-2 rounded-full mr-1"
                           style={{ backgroundColor: getTaskPhaseInfo(task.taskPhase).color }}
                         />
-                        <span className="font-medium">{task.taskPhaseName}</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{task.taskPhaseName}</span>
                         {task.title && task.title !== "업무" && task.title !== "제품 입력" && (
-                          <span className="text-gray-500">({task.title})</span>
+                          <span className="text-gray-500 dark:text-gray-400">({task.title})</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">-</TableCell>
+                    <TableCell className="text-sm text-gray-500 dark:text-gray-400">-</TableCell>
                     <TableCell className="text-sm">
-                      <div className="flex items-center gap-1">
-                        <CalendarIcon className="w-3 h-3" />
+                      <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                        <CalendarIcon className="w-3 h-3 text-gray-400" />
                         {formatDate(task.dueDate)}
                       </div>
                     </TableCell>
@@ -545,7 +545,7 @@ const StaffProjectOverview = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={task.progress} className="w-16" />
-                        <span className="text-sm text-gray-500 min-w-[2rem]">
+                        <span className="text-sm text-gray-500 dark:text-gray-400 min-w-[2rem]">
                           {task.progress}%
                         </span>
                       </div>
@@ -558,7 +558,7 @@ const StaffProjectOverview = () => {
             }).flat()}
             {staffProjectData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
                   {t?.noMatchingProjects || "선택한 조건에 맞는 프로젝트가 없습니다."}
                 </TableCell>
               </TableRow>

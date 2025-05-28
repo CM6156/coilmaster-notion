@@ -1,7 +1,7 @@
 
-import { AuthTranslations } from '@/types';
+import { LoginTranslations, RegisterTranslations, ForgotPasswordTranslations } from '@/types';
 
-export const authTranslations: AuthTranslations = {
+export const authTranslations = {
   login: {
     title: "로그인",
     description: "계정에 로그인하여 계속하세요",
@@ -21,8 +21,11 @@ export const authTranslations: AuthTranslations = {
     title: "회원가입",
     description: "계정을 만들어 시작하세요",
     name: "이름",
+    namePlaceholder: "성명을 입력하세요",
     email: "이메일",
+    emailPlaceholder: "email@company.com",
     password: "비밀번호",
+    passwordPlaceholder: "••••••••",
     confirmPassword: "비밀번호 확인",
     department: "부서",
     position: "직책",
@@ -31,7 +34,13 @@ export const authTranslations: AuthTranslations = {
     haveAccount: "이미 계정이 있으신가요?",
     alreadyHaveAccount: "이미 계정이 있으신가요?",
     login: "로그인",
-    processing: "처리 중..."
+    processing: "처리 중...",
+    passwordStrength: "비밀번호 강도",
+    veryWeak: "매우 약함",
+    weak: "약함",
+    medium: "보통",
+    strong: "강함",
+    veryStrong: "매우 강함"
   },
   
   forgotPassword: {

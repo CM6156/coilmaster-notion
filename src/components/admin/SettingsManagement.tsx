@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useUserActivity } from "@/context/UserActivityContext";
 
 interface SettingChange {
   id: string;
@@ -82,9 +83,16 @@ export default function SettingsManagement() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("company");
+
+  // 탭 변경 시 활동 업데이트
+  const handleTabChange = (tabValue: string) => {
+    setActiveTab(tabValue);
+    updateUserActivity('관리자', `설정관리-${tabValue}`);
+  };
   const [saveProgress, setSaveProgress] = useState(0);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { toast } = useToast();
+  const { currentUsers, updateUserActivity, getUsersOnTab } = useUserActivity();
 
   // 협업 관련 상태
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
@@ -627,12 +635,7 @@ export default function SettingsManagement() {
     }
   };
 
-  // 간단한 테스트 함수
-  const simpleTest = () => {
-    console.log("✅ 간단한 테스트 함수가 실행되었습니다!");
-    alert("간단한 테스트 성공!");
-    return true;
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
@@ -689,36 +692,7 @@ export default function SettingsManagement() {
           <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-white/5"></div>
         </div>
 
-        {/* 🧪 JavaScript 테스트 섹션 */}
-        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 shadow-lg">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-3">🧪 JavaScript 테스트</h3>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => {
-                console.log("🔥 첫 번째 테스트 버튼 클릭됨!");
-                alert("첫 번째 테스트 성공!");
-              }}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white"
-            >
-              테스트 1: 직접 함수
-            </Button>
-            <Button 
-              onClick={simpleTest}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              테스트 2: 함수 호출
-            </Button>
-            <Button 
-              onClick={() => setShowSuccessModal(true)}
-              className="bg-green-500 hover:bg-green-600 text-white"
-            >
-              테스트 3: 모달 열기
-            </Button>
-          </div>
-          <p className="text-sm text-yellow-700 mt-2">
-            위 버튼들이 작동하지 않으면 JavaScript에 문제가 있습니다.
-          </p>
-        </div>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* 왼쪽 사이드바 */}
@@ -735,42 +709,44 @@ export default function SettingsManagement() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {loadingUsers ? (
-                  <div className="flex items-center justify-center py-4">
-                    <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />
-                    <span className="ml-2 text-sm text-gray-500">사용자 조회 중...</span>
-                  </div>
-                ) : onlineUsers.length === 0 ? (
+                {currentUsers.filter(u => u.isOnline && u.currentPage === '관리자').length === 0 ? (
                   <div className="text-center py-4">
                     <UserCheck className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">현재 온라인 사용자가 없습니다</p>
+                    <p className="text-sm text-gray-500">현재 설정관리에 온라인 사용자가 없습니다</p>
                   </div>
                 ) : (
-                  onlineUsers.map((user) => (
-                    <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="relative">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback>{user.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white ${getStatusColor(user.status)}`}></div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{user.name}</p>
-                        {user.currentSection && (
-                          <p className="text-xs text-gray-500 truncate">{user.currentSection}</p>
-                        )}
-                        <p className="text-xs text-gray-400">
-                          {(user as any).lastSeen === 0 ? '방금 전' : `${(user as any).lastSeen}분 전`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {user.status === 'editing' && <Edit3 className="h-3 w-3 text-orange-500" />}
-                        {user.status === 'viewing' && <Eye className="h-3 w-3 text-green-500" />}
-                        {(user as any).role === 'admin' && <Shield className="h-3 w-3 text-purple-500" />}
-                      </div>
-                    </div>
-                  ))
+                  currentUsers
+                    .filter(u => u.isOnline && u.currentPage === '관리자')
+                    .map((user) => {
+                      const minutesAgo = Math.floor((Date.now() - user.lastActivity.getTime()) / (1000 * 60));
+                      return (
+                        <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                          <div className="relative">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar} />
+                              <AvatarFallback>{user.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <div className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-green-500"></div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{user.name}</p>
+                            {user.currentTab && (
+                              <p className="text-xs text-gray-500 truncate">
+                                {user.currentTab.replace('설정관리-', '')} 탭
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400">
+                              {minutesAgo === 0 ? '방금 전' : `${minutesAgo}분 전`}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {minutesAgo <= 1 && <Edit3 className="h-3 w-3 text-orange-500" />}
+                            {minutesAgo > 1 && minutesAgo <= 3 && <Eye className="h-3 w-3 text-green-500" />}
+                            {user.role === 'admin' && <Shield className="h-3 w-3 text-purple-500" />}
+                          </div>
+                        </div>
+                      );
+                    })
                 )}
               </CardContent>
             </Card>
@@ -817,7 +793,7 @@ export default function SettingsManagement() {
 
           {/* 메인 콘텐츠 */}
           <div className="lg:col-span-3">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
               <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm border-0 shadow-lg p-1 h-14">
                 <TabsTrigger 
                   value="company" 
@@ -949,17 +925,7 @@ export default function SettingsManagement() {
                       )}
                     </Button>
 
-                    {/* 테스트용 간단한 버튼 */}
-                    <Button 
-                      onClick={() => {
-                        alert("버튼이 클릭되었습니다!");
-                        console.log("테스트 버튼 클릭됨");
-                      }}
-                      variant="outline"
-                      className="w-full h-12 mb-4 border-2 border-gray-300"
-                    >
-                      🧪 테스트 버튼 (클릭해보세요)
-                    </Button>
+
                   </CardContent>
                 </Card>
               </TabsContent>

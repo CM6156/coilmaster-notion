@@ -212,6 +212,9 @@ export interface SidebarTranslations {
   taskManagement?: string;
   taskJournal?: string;
   taskJournalList?: string;
+  chat?: string;
+  chatRooms?: string;
+  directMessages?: string;
   byCompany?: string;
   teamCorporation?: string;
   byDepartment?: string;

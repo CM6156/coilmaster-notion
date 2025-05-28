@@ -5,6 +5,7 @@ import Header from "./Header";
 import Sidebar from "./Sidebar";
 import MobileSidebar from "./MobileSidebar";
 import ChairmanMessageDialog from "../ui/ChairmanMessageDialog";
+import HelpChatbot from "../ui/HelpChatbot";
 
 export default function Layout() {
   const [showChairmanMessage, setShowChairmanMessage] = useState(false);
@@ -43,6 +44,9 @@ export default function Layout() {
         open={showChairmanMessage}
         onOpenChange={setShowChairmanMessage}
       />
+      
+      {/* 도움말 챗봇 */}
+      <HelpChatbot />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/ui/theme-provider";
 import { AppProvider } from "./context/AppContext";
 import { LanguageProvider } from "./context/LanguageContext";
+import { UserActivityProvider } from "./context/UserActivityContext";
 import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 
@@ -36,6 +37,10 @@ import Customers from "./pages/Customers";
 import Contacts from "./pages/Contacts";
 import DailyReports from "./pages/DailyReports";
 
+// Chat pages (temporarily disabled)
+// import Chat from "./pages/Chat";
+// import DirectMessages from "./pages/DirectMessages";
+
 import Layout from "./components/layout/Layout";
 import { useAuth } from "./context/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -59,11 +64,27 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Root redirect component - checks auth status first
+const RootRedirect = () => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  return <Navigate to={isAuthenticated ? "/dashboard" : "/intro"} replace />;
+};
+
 const App = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="ui-theme">
       <LanguageProvider>
-        <AppProvider>
+        <UserActivityProvider>
+          <AppProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
@@ -71,8 +92,8 @@ const App = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/intro" element={<Intro />} />
             
-            {/* Root route */}
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            {/* Root route - checks auth status first */}
+            <Route index element={<RootRedirect />} />
 
             {/* Protected routes with Layout */}
             <Route element={
@@ -92,6 +113,8 @@ const App = () => {
               <Route path="/customers" element={<Customers />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/daily-reports" element={<DailyReports />} />
+              {/* <Route path="/chat" element={<Chat />} /> */}
+              {/* <Route path="/chat/direct" element={<DirectMessages />} /> */}
               {/* <Route path="/calendar" element={<Calendar />} /> */}
               {/* <Route path="/reports" element={<Reports />} /> */}
               {/* <Route path="/team" element={<TeamView />} /> */}
@@ -105,6 +128,7 @@ const App = () => {
           </Routes>
           <Toaster />
         </AppProvider>
+        </UserActivityProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

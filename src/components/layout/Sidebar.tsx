@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
+import { useUserActivity } from "@/context/UserActivityContext";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import {
@@ -65,6 +66,7 @@ interface OnlineUser {
   status: 'online' | 'away' | 'busy' | 'offline';
   currentPage?: string;
   lastSeen?: string;
+  role?: string;
 }
 
 interface NotificationItem {
@@ -80,6 +82,7 @@ interface NotificationItem {
 const Sidebar = () => {
   const { currentUser, tasks, projects, notifications, departments, workJournals } = useAppContext();
   const { translations, language } = useLanguage();
+  const { currentUsers, getUsersOnPage } = useUserActivity();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
@@ -172,42 +175,47 @@ const Sidebar = () => {
     return () => clearInterval(logInterval);
   }, []); // 의존성 배열에서 loadingLogs 제거
 
-  // 실제 온라인 사용자 데이터 가져오기
+  // 실시간 온라인 사용자 데이터 가져오기
   useEffect(() => {
     const fetchOnlineUsers = async () => {
       try {
         console.log('👥 온라인 사용자 조회 시작');
         
-        // 실제 users 테이블에서 최근 활동 사용자 조회
+        // 모든 사용자를 조회 (활성화된 사용자만)
         const { data: users, error } = await supabase
-            .from('users')
-          .select('id, name, email, avatar, role, last_seen, updated_at')
-          .order('updated_at', { ascending: false })
-            .limit(10);
+          .from('users')
+          .select('id, name, email, avatar, role, last_seen, updated_at, current_page, is_online')
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false });
 
         if (error) {
           console.error('온라인 사용자 조회 오류:', error);
           return;
         }
         
-        console.log('👤 사용자 목록:', users);
+        console.log('👤 전체 사용자 목록:', users?.length || 0, '명');
         
-        // 최근 15분 이내에 활동한 사용자를 온라인으로 간주
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+        // 최근 10분 이내에 활동한 사용자를 온라인으로 간주
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
         
-        const onlineUserList = (users || []).map(user => {
-          const lastActivity = new Date(user.updated_at || user.last_seen || 0);
-          const isOnline = lastActivity > fifteenMinutesAgo;
-          
-          return {
+        const onlineUserList = (users || [])
+          .map(user => {
+            const lastActivity = new Date(user.updated_at || user.last_seen || 0);
+            const isRecentlyActive = lastActivity > tenMinutesAgo;
+            const isOnline = user.is_online && isRecentlyActive;
+            
+            return {
               id: user.id,
-            name: user.name || user.email || 'Unknown',
+              name: user.name || user.email || 'Unknown',
               avatar: user.avatar,
-            status: isOnline ? 'online' : 'offline',
-            currentPage: isOnline ? getCurrentPageName() : '오프라인',
-            lastSeen: lastActivity.toLocaleString('ko-KR')
-          } as OnlineUser;
-        }).filter(user => user.status === 'online');
+              status: isOnline ? 'online' : 'offline',
+              currentPage: user.current_page || (isOnline ? '활동 중' : '오프라인'),
+              lastSeen: lastActivity.toLocaleString('ko-KR'),
+              role: user.role
+            } as OnlineUser;
+          })
+          .filter(user => user.status === 'online')
+          .slice(0, 20); // 최대 20명까지 표시
             
         setOnlineUsers(onlineUserList);
         console.log('✅ 온라인 사용자 업데이트:', onlineUserList.length, '명');
@@ -219,84 +227,104 @@ const Sidebar = () => {
 
     fetchOnlineUsers();
 
-    // 1분마다 온라인 사용자 새로고침
-    const userInterval = setInterval(fetchOnlineUsers, 60000);
+    // 30초마다 온라인 사용자 새로고침
+    const userInterval = setInterval(fetchOnlineUsers, 30000);
 
     return () => clearInterval(userInterval);
   }, [location.pathname]);
 
-  // 사용자 활동 상태 업데이트 (최적화됨)
+  // 사용자 활동 상태 업데이트 (실시간 온라인 상태 관리)
   useEffect(() => {
     let updateInProgress = false;
     let lastUpdateTime = 0;
-    const UPDATE_INTERVAL = 5 * 60 * 1000; // 5분마다만 업데이트
+    const UPDATE_INTERVAL = 2 * 60 * 1000; // 2분마다 업데이트
     
     const updateUserActivity = async () => {
       const now = Date.now();
       
       // 이미 업데이트 중이거나 최근에 업데이트했으면 건너뛰기
       if (updateInProgress || (now - lastUpdateTime) < UPDATE_INTERVAL) {
-        console.log('사용자 활동 상태 업데이트 건너뜀 - 너무 빈번함');
         return;
       }
       
       updateInProgress = true;
       
       try {
-      if (currentUser || userProfile) {
-        const userId = currentUser?.id || userProfile?.id;
-        const userName = currentUser?.name || userProfile?.name;
-        
-        if (!userId || typeof userId !== 'string') {
-          console.log('유효하지 않은 사용자 ID:', userId);
-          return;
-        }
-
-        // UUID 형식 검증
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(userId)) {
-          console.log('유효하지 않은 UUID 형식:', userId);
-          return;
-        }
-
-          // 활동 상태 업데이트 비활성화 (리소스 절약)
-          console.log('사용자 활동 상태 업데이트 비활성화됨 (리소스 절약)');
-          lastUpdateTime = now;
+        if (currentUser || userProfile) {
+          const userId = currentUser?.id || userProfile?.id;
+          const userName = currentUser?.name || userProfile?.name;
+          
+          if (!userId || typeof userId !== 'string') {
+            console.log('유효하지 않은 사용자 ID:', userId);
+            return;
           }
-        } catch (error) {
-          console.log('사용자 활동 상태 업데이트 중 오류:', error);
+
+          // UUID 형식 검증
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(userId)) {
+            console.log('유효하지 않은 UUID 형식:', userId);
+            return;
+          }
+
+          console.log('👤 사용자 활동 상태 업데이트:', userName);
+          
+          // 사용자 온라인 상태 업데이트
+          const { error } = await supabase
+            .from('users')
+            .update({
+              updated_at: new Date().toISOString(),
+              last_seen: new Date().toISOString(),
+              current_page: getCurrentPageName(),
+              is_online: true
+            })
+            .eq('id', userId);
+
+          if (error) {
+            console.error('사용자 활동 상태 업데이트 오류:', error);
+          } else {
+            console.log('✅ 사용자 활동 상태 업데이트 성공');
+            lastUpdateTime = now;
+          }
+        }
+      } catch (error) {
+        console.error('사용자 활동 상태 업데이트 중 오류:', error);
       } finally {
         updateInProgress = false;
       }
     };
 
-    // 초기 업데이트는 건너뛰기
-    // updateUserActivity();
+    // 초기 활동 상태 업데이트
+    updateUserActivity();
 
-    // 페이지 변경 시에만 활동 상태 업데이트 (throttle 적용)
+    // 페이지 변경 시 활동 상태 업데이트
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         setTimeout(updateUserActivity, 1000); // 1초 지연
       }
     };
 
-    // 사용자 활동 감지는 매우 제한적으로만 (10분마다 최대 한 번)
+    // 주기적으로 활동 상태 업데이트 (5분마다)
+    const regularUpdateInterval = setInterval(updateUserActivity, 5 * 60 * 1000);
+
+    // 사용자 활동 감지 (클릭, 키보드 입력 시)
     let activityTimeout: NodeJS.Timeout;
     const handleUserActivity = () => {
       clearTimeout(activityTimeout);
-      activityTimeout = setTimeout(updateUserActivity, 10 * 60 * 1000); // 10분마다 최대 한 번
+      activityTimeout = setTimeout(updateUserActivity, 30 * 1000); // 30초 후 업데이트
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // 마우스/키보드 이벤트는 제거 (너무 빈번함)
-    // document.addEventListener('mousemove', handleUserActivity);
-    // document.addEventListener('keydown', handleUserActivity);
-    // document.addEventListener('click', handleUserActivity);
+    document.addEventListener('mousedown', handleUserActivity);
+    document.addEventListener('keydown', handleUserActivity);
+    document.addEventListener('scroll', handleUserActivity);
 
     return () => {
       clearTimeout(activityTimeout);
+      clearInterval(regularUpdateInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('mousedown', handleUserActivity);
+      document.removeEventListener('keydown', handleUserActivity);
+      document.removeEventListener('scroll', handleUserActivity);
     };
   }, []); // currentUser, userProfile 의존성 완전 제거로 무한 루프 방지
 
@@ -427,26 +455,28 @@ const Sidebar = () => {
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
           if (uuidRegex.test(userId)) {
             try {
-              // 직접 업데이트 방식 사용 (함수 대신)
+              console.log('🔴 사용자 오프라인 상태로 변경:', currentUser?.name || userProfile?.name);
+              
+              // 오프라인 상태로 업데이트
               const updateData: any = {
-                status: 'offline',
-                last_seen: new Date().toISOString()
+                is_online: false,
+                last_seen: new Date().toISOString(),
+                current_page: null,
+                updated_at: new Date().toISOString()
               };
 
-              try {
-                updateData.current_page = null;
-              } catch (e) {
-                // current_page 컬럼이 없으면 제외
-              }
-
-              await supabase
+              const { error } = await supabase
                 .from('users')
                 .update(updateData)
                 .eq('id', userId);
               
-              console.log('사용자 오프라인 상태로 변경:', currentUser?.name || userProfile?.name);
+              if (error) {
+                console.error('오프라인 상태 변경 실패:', error);
+              } else {
+                console.log('✅ 사용자 오프라인 상태로 변경 완료');
+              }
             } catch (error) {
-              console.log('오프라인 상태 변경 실패:', error);
+              console.error('오프라인 상태 변경 중 오류:', error);
             }
           }
         }
@@ -570,13 +600,35 @@ const Sidebar = () => {
         },
       ],
     },
-    {
+    // {
+    //   name: t.chat || "채팅",
+    //   icon: <MessageCircle className="h-5 w-5" />,
+    //   path: "/chat",
+    //   gradient: "from-indigo-500 to-cyan-600",
+    //   badge: undefined, // 읽지 않은 메시지 수로 나중에 업데이트
+    //   submenu: [
+    //     {
+    //       name: t.chatRooms || "채팅방",
+    //       path: "/chat",
+    //       icon: <MessageCircle className="h-4 w-4" />,
+    //       color: "text-indigo-600"
+    //     },
+    //     {
+    //       name: t.directMessages || "개인 메시지",
+    //       path: "/chat/direct",
+    //       icon: <UserCheck className="h-4 w-4" />,
+    //       color: "text-cyan-600"
+    //     },
+    //   ],
+    // },
+    // 관리자 및 매니저만 접근 가능한 관리자 패널
+    ...(userProfile?.role === 'admin' || userProfile?.role === 'manager' || currentUser?.role === 'admin' || currentUser?.role === 'manager' ? [{
       name: t.adminPanel || "관리자 패널",
       icon: <Cog className="h-5 w-5" />,
       path: "/admin",
       gradient: "from-purple-500 to-pink-600",
       badge: hasNewFeatures ? "NEW" : undefined
-    },
+    }] : []),
   ];
 
   const toggleSubmenu = (path: string) => {
@@ -889,7 +941,7 @@ const Sidebar = () => {
                 {/* 멤버십 정보 */}
                 <div className="flex items-center gap-1 mt-1">
                   <Award className="h-3 w-3 text-yellow-500" />
-                  <span className="text-xs text-yellow-400 font-medium">우수직원</span>
+                  <span className="text-xs text-yellow-400 font-medium">Premium Member</span>
                 </div>
                 
                 {/* Microsoft 로그인 정보 */}
@@ -909,10 +961,9 @@ const Sidebar = () => {
           </div>
         </div>
 
-        {/* 알림 및 온라인 사용자 */}
+        {/* 알림 */}
         {!isCollapsed ? (
-          <div className="p-4 border-b border-slate-700/50 space-y-3">
-            {/* 알림 */}
+          <div className="p-4 border-b border-slate-700/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-slate-400" />
@@ -923,50 +974,6 @@ const Sidebar = () => {
                   {unreadNotifications}
                 </Badge>
               )}
-            </div>
-
-            {/* 온라인 사용자 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-slate-400" />
-                <span className="text-sm text-slate-300">{t.online || "온라인"}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-slate-400">{onlineCount}</span>
-        </div>
-      </div>
-
-            {/* 온라인 사용자 목록 */}
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {actualOnlineUsers.slice(0, 3).map((user) => (
-                <Tooltip key={user.id}>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-700/30 transition-colors cursor-pointer">
-                      <div className="relative">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback className="text-xs bg-slate-600">
-                            {user.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className={cn("absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-slate-900", getStatusColor(user.status))}></div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs text-white truncate">{user.name}</div>
-                        <div className="text-xs text-slate-400 truncate">
-                          {user.currentPage || user.lastSeen}
-                        </div>
-                      </div>
-                      {getStatusIcon(user.status)}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>{user.name} - {user.status}</p>
-                    {user.currentPage && <p>{t.currentPage || "현재"}: {user.currentPage}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              ))}
             </div>
           </div>
         ) : (
@@ -993,12 +1000,87 @@ const Sidebar = () => {
                 </TooltipTrigger>
                 <TooltipContent side="right">
                   <p>{t.notifications || "알림"} {unreadNotifications > 0 ? `(${unreadNotifications})` : ''}</p>
-                  <p>{t.online || "온라인"} 사용자: {onlineCount}명</p>
+                  <p>온라인 사용자: {onlineUsers.length}명</p>
                 </TooltipContent>
               </Tooltip>
             </div>
           </div>
         )}
+
+        {/* 온라인 사용자 */}
+        {!isCollapsed ? (
+          <div className="p-4 border-b border-slate-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-slate-400" />
+                <span className="text-sm text-slate-300">온라인 사용자</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-slate-400">{onlineUsers.length}</span>
+              </div>
+            </div>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {onlineUsers.length === 0 ? (
+                <div className="text-xs text-slate-500 text-center py-2">
+                  현재 온라인 사용자가 없습니다
+                </div>
+              ) : (
+                onlineUsers.map((user) => (
+                  <Tooltip key={user.id}>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-700/30 transition-colors cursor-pointer">
+                        <div className="relative">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={user.avatar} />
+                            <AvatarFallback className="text-xs bg-slate-600">
+                              {user.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-900"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <div className="text-xs font-medium text-white truncate">{user.name}</div>
+                            {user.role && (
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "text-xs px-1 py-0 border-0",
+                                  user.role === 'admin' ? 'bg-red-500/20 text-red-300' :
+                                  user.role === 'manager' ? 'bg-blue-500/20 text-blue-300' :
+                                  'bg-green-500/20 text-green-300'
+                                )}
+                              >
+                                {user.role === 'admin' ? '관리자' : 
+                                 user.role === 'manager' ? '매니저' : '사용자'}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-400 truncate">{user.currentPage}</div>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <div className="space-y-1">
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-xs">상태: 온라인</p>
+                        <p className="text-xs">현재: {user.currentPage}</p>
+                        {user.role && (
+                          <p className="text-xs">역할: {
+                            user.role === 'admin' ? '관리자' : 
+                            user.role === 'manager' ? '매니저' : '사용자'
+                          }</p>
+                        )}
+                        <p className="text-xs">최근 활동: {user.lastSeen}</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ))
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {/* 네비게이션 메뉴 */}
         <nav className={cn("flex-1 overflow-y-auto", isCollapsed ? "p-2" : "p-3")}>
@@ -1144,6 +1226,8 @@ const Sidebar = () => {
           ))}
         </ul>
       </nav>
+
+
 
         {/* 하단 메뉴 */}
         <div className={cn("border-t border-slate-700/50 space-y-2", isCollapsed ? "p-2" : "p-3")}>
