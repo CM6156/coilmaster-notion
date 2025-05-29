@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   Plus,
@@ -25,7 +26,10 @@ import {
   Link,
   Upload,
   File,
-  ExternalLink
+  ExternalLink,
+  Image,
+  FileText,
+  Trash2
 } from "lucide-react";
 import { Task } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -61,6 +65,8 @@ const Tasks = () => {
   const [newTaskData, setNewTaskData] = useState<Partial<Task>>({});
   const [taskFiles, setTaskFiles] = useState<Record<string, { files: any[], links: string[] }>>({});
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [fileDialogOpen, setFileDialogOpen] = useState<string | null>(null);
+  const [newLink, setNewLink] = useState("");
 
   // Get current project info from URL or context
   const getCurrentProject = () => {
@@ -294,27 +300,26 @@ const Tasks = () => {
     }));
   };
 
-  // Handle file upload
-  const handleFileUpload = async (taskId: string, file: File) => {
+  // Handle multiple file upload
+  const handleMultipleFileUpload = async (taskId: string, files: FileList) => {
     const uploadingSet = new Set(uploadingFiles);
     uploadingSet.add(taskId);
     setUploadingFiles(uploadingSet);
 
     try {
-      // Here you would implement actual file upload to your storage
-      // For now, we'll just simulate it
-      const fileData = {
-        id: Date.now().toString(),
+      const fileDataArray = Array.from(files).map(file => ({
+        id: `${Date.now()}-${Math.random()}`,
         name: file.name,
         size: file.size,
         type: file.type,
-        url: URL.createObjectURL(file) // In real implementation, this would be the uploaded file URL
-      };
+        url: URL.createObjectURL(file),
+        isImage: file.type.startsWith('image/')
+      }));
 
       setTaskFiles(prev => ({
         ...prev,
         [taskId]: {
-          files: [...(prev[taskId]?.files || []), fileData],
+          files: [...(prev[taskId]?.files || []), ...fileDataArray],
           links: prev[taskId]?.links || []
         }
       }));
@@ -325,6 +330,43 @@ const Tasks = () => {
       uploadingSet.delete(taskId);
       setUploadingFiles(uploadingSet);
     }
+  };
+
+  // Handle file removal
+  const handleRemoveFile = (taskId: string, fileId: string) => {
+    setTaskFiles(prev => ({
+      ...prev,
+      [taskId]: {
+        files: prev[taskId]?.files.filter(f => f.id !== fileId) || [],
+        links: prev[taskId]?.links || []
+      }
+    }));
+  };
+
+  // Handle link removal
+  const handleRemoveLink = (taskId: string, linkIndex: number) => {
+    setTaskFiles(prev => ({
+      ...prev,
+      [taskId]: {
+        files: prev[taskId]?.files || [],
+        links: prev[taskId]?.links.filter((_, index) => index !== linkIndex) || []
+      }
+    }));
+  };
+
+  // Get file icon based on type
+  const getFileIcon = (file: any) => {
+    if (file.isImage) return <Image className="h-4 w-4 text-blue-500" />;
+    return <FileText className="h-4 w-4 text-gray-500" />;
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // Handle link addition
@@ -422,59 +464,167 @@ const Tasks = () => {
     return (
       <div className="flex items-center gap-2">
         {totalItems > 0 && (
-          <div 
-            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-1 py-0.5"
-            onClick={() => {
-              // Show files and links in a modal or dropdown
-              const items = [
-                ...taskData.files.map(f => `📁 ${f.name}`),
-                ...taskData.links.map(l => `🔗 ${l}`)
-              ];
-              alert(`첨부된 파일 및 링크:\n\n${items.join('\n')}`);
-            }}
-          >
-            <Paperclip className="h-3 w-3 text-gray-400" />
-            <span className="text-xs text-gray-600">{totalItems}</span>
-          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-2 py-1">
+                <Paperclip className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-600">{totalItems}</span>
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>첨부된 파일 및 링크</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Files */}
+                {taskData.files.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">파일 ({taskData.files.length})</h4>
+                    <div className="space-y-2">
+                      {taskData.files.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center gap-2">
+                            {getFileIcon(file)}
+                            <div>
+                              <div className="text-sm font-medium">{file.name}</div>
+                              <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => window.open(file.url, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                              onClick={() => handleRemoveFile(taskId, file.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Links */}
+                {taskData.links.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">링크 ({taskData.links.length})</h4>
+                    <div className="space-y-2">
+                      {taskData.links.map((link, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center gap-2">
+                            <Link className="h-4 w-4 text-blue-500" />
+                            <div className="text-sm truncate max-w-48">{link}</div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => window.open(link, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                              onClick={() => handleRemoveLink(taskId, index)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         )}
         
-        <div className="flex items-center gap-1">
-          {/* File upload button */}
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(taskId, file);
-              }}
-              multiple
-            />
+        <Dialog open={fileDialogOpen === taskId} onOpenChange={(open) => setFileDialogOpen(open ? taskId : null)}>
+          <DialogTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-              asChild
             >
-              <span>
-                <Upload className="h-3 w-3" />
-              </span>
+              <Plus className="h-3 w-3" />
             </Button>
-          </label>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>파일 및 링크 추가</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* File upload */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">파일 업로드</label>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files) {
+                        handleMultipleFileUpload(taskId, files);
+                        setFileDialogOpen(null);
+                      }
+                    }}
+                    multiple
+                  />
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">파일을 선택하거나 드래그하세요</p>
+                    <p className="text-xs text-gray-400 mt-1">여러 파일 선택 가능</p>
+                  </div>
+                </label>
+              </div>
 
-          {/* Add link button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-            onClick={() => {
-              const link = prompt('링크 URL을 입력하세요:');
-              if (link) handleAddLink(taskId, link);
-            }}
-          >
-            <Link className="h-3 w-3" />
-          </Button>
-        </div>
+              {/* Link addition */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">링크 추가</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="링크 URL을 입력하세요..."
+                    value={newLink}
+                    onChange={(e) => setNewLink(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newLink.trim()) {
+                        handleAddLink(taskId, newLink);
+                        setNewLink("");
+                        setFileDialogOpen(null);
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => {
+                      if (newLink.trim()) {
+                        handleAddLink(taskId, newLink);
+                        setNewLink("");
+                        setFileDialogOpen(null);
+                      }
+                    }}
+                    disabled={!newLink.trim()}
+                  >
+                    추가
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   };
@@ -957,8 +1107,11 @@ const Tasks = () => {
                           type="file"
                           className="hidden"
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file && newTaskData.id) handleFileUpload(newTaskData.id, file);
+                            const files = e.target.files;
+                            if (files) {
+                              handleMultipleFileUpload(newTaskData.id, files);
+                              setFileDialogOpen(null);
+                            }
                           }}
                           multiple
                         />
