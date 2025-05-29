@@ -710,31 +710,31 @@ const Tasks = () => {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                   
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stage
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Task Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   담당
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   부서
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Due Date
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   상태
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   파일 & 링크
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   프로젝트
                 </th>
               </tr>
@@ -750,22 +750,20 @@ const Tasks = () => {
                     {/* Parent Task Row */}
                     <tr className="hover:bg-gray-50">
                       {/* Expand/Collapse + Add Child Button */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          {hasChildren && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleTaskExpansion(task.id)}
-                              className="h-6 w-6 p-0"
-                            >
-                              {isExpanded ? (
-                                <ChevronDown className="h-3 w-3" />
-                              ) : (
-                                <ChevronRight className="h-3 w-3" />
-                              )}
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleTaskExpansion(task.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -778,7 +776,7 @@ const Tasks = () => {
                       </td>
                       
                       {/* Stage */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-gray-900">
                             {getTaskStageNumber(task)}.
@@ -798,37 +796,31 @@ const Tasks = () => {
                       </td>
                       
                       {/* Task Name */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         {renderEditableCell(task, 'title', task.title, 'text')}
                       </td>
                       
                       {/* 담당 */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {renderEditableCell(task, 'assignedTo', getAssigneeName(task.assignedTo), 'select', 
-                          [...users, ...employees, ...managers].filter(person => person.id && person.name).map(person => ({
-                            value: person.id,
-                            label: person.name
-                          }))
-                        )}
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
+                          <span className="text-sm">{getAssigneeName(task.assignedTo)}</span>
+                        </div>
                       </td>
                       
                       {/* 부서 */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {renderEditableCell(task, 'department', getDepartmentName(task.department), 'select',
-                          departments.filter(dept => dept.id && dept.name).map(dept => ({
-                            value: dept.id,
-                            label: dept.name
-                          }))
-                        )}
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
+                          <span className="text-sm">{getDepartmentName(task.department)}</span>
+                        </div>
                       </td>
                       
                       {/* Due Date */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {renderEditableCell(task, 'dueDate', task.dueDate, 'date')}
                       </td>
                       
                       {/* 상태 */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {renderEditableCell(task, 'status', task.status, 'select', [
                           { value: '할 일', label: '할 일' },
                           { value: '진행중', label: '진행중' },
@@ -840,12 +832,12 @@ const Tasks = () => {
                       </td>
                       
                       {/* 파일 & 링크 */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {renderFileAndLinkCell(task.id)}
                       </td>
                       
                       {/* 프로젝트 */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {renderEditableCell(task, 'projectId', getProjectName(task.projectId), 'select',
                           projects.filter(project => project.id && project.name).map(project => ({
                             value: project.id,
@@ -860,9 +852,9 @@ const Tasks = () => {
                       const childPhaseInfo = getTaskPhaseInfo(childTask.taskPhase);
                       
                       return (
-                        <tr key={childTask.id} className="hover:bg-gray-50 bg-gray-25">
+                        <tr key={childTask.id} className="hover:bg-gray-50 bg-blue-25">
                           {/* Empty cell for indentation */}
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             <div className="ml-6">
                               <Button
                                 variant="ghost"
@@ -876,7 +868,7 @@ const Tasks = () => {
                           </td>
                           
                           {/* Stage */}
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             <div className="flex items-center gap-2 ml-6">
                               <span className="text-sm font-medium text-gray-900">
                                 {getTaskStageNumber(childTask)}.
@@ -896,33 +888,27 @@ const Tasks = () => {
                           </td>
                           
                           {/* Other cells for child task - same structure as parent */}
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2">
                             {renderEditableCell(childTask, 'title', childTask.title, 'text')}
                           </td>
                           
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {renderEditableCell(childTask, 'assignedTo', getAssigneeName(childTask.assignedTo), 'select', 
-                              [...users, ...employees, ...managers].filter(person => person.id && person.name).map(person => ({
-                                value: person.id,
-                                label: person.name
-                              }))
-                            )}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
+                              <span className="text-sm">{getAssigneeName(childTask.assignedTo)}</span>
+                            </div>
                           </td>
                           
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {renderEditableCell(childTask, 'department', getDepartmentName(childTask.department), 'select',
-                              departments.filter(dept => dept.id && dept.name).map(dept => ({
-                                value: dept.id,
-                                label: dept.name
-                              }))
-                            )}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
+                              <span className="text-sm">{getDepartmentName(childTask.department)}</span>
+                            </div>
                           </td>
                           
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {renderEditableCell(childTask, 'dueDate', childTask.dueDate, 'date')}
                           </td>
                           
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {renderEditableCell(childTask, 'status', childTask.status, 'select', [
                               { value: '할 일', label: '할 일' },
                               { value: '진행중', label: '진행중' },
@@ -933,11 +919,11 @@ const Tasks = () => {
                             ])}
                           </td>
                           
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {renderFileAndLinkCell(childTask.id)}
                           </td>
                           
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {renderEditableCell(childTask, 'projectId', getProjectName(childTask.projectId), 'select',
                               projects.filter(project => project.id && project.name).map(project => ({
                                 value: project.id,
@@ -955,7 +941,7 @@ const Tasks = () => {
               {/* Empty state */}
               {sortedRootTasks.length === 0 && !isAddingNewTask && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-3 py-8 text-center text-gray-500">
                     <div className="text-lg font-medium mb-2">등록된 업무가 없습니다</div>
                     <p className="text-sm">새 업무를 추가해보세요.</p>
                   </td>
@@ -966,7 +952,7 @@ const Tasks = () => {
               {isAddingNewTask && (
                 <tr className="bg-blue-50 border-l-4 border-blue-500">
                   {/* Save/Cancel buttons */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
@@ -988,7 +974,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* Stage */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-900">
                         {(() => {
@@ -1016,7 +1002,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* Task Name */}
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <Input
                       value={newTaskData.title || ''}
                       onChange={(e) => handleNewTaskUpdate('title', e.target.value)}
@@ -1031,7 +1017,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* 담당 */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Select
                       value={newTaskData.assignedTo || ''}
                       onValueChange={(value) => handleNewTaskUpdate('assignedTo', value)}
@@ -1050,7 +1036,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* 부서 */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Select
                       value={newTaskData.department || ''}
                       onValueChange={(value) => handleNewTaskUpdate('department', value)}
@@ -1069,7 +1055,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* Due Date */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Input
                       type="date"
                       value={newTaskData.dueDate || ''}
@@ -1079,7 +1065,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* 상태 */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Select
                       value={newTaskData.status || '할 일'}
                       onValueChange={(value) => handleNewTaskUpdate('status', value)}
@@ -1099,7 +1085,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* 파일 & 링크 */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       {/* File upload button */}
                       <label className="cursor-pointer">
@@ -1143,7 +1129,7 @@ const Tasks = () => {
                   </td>
                   
                   {/* 프로젝트 */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Select
                       value={newTaskData.projectId || ''}
                       onValueChange={(value) => handleNewTaskUpdate('projectId', value)}
@@ -1166,7 +1152,7 @@ const Tasks = () => {
               {/* Add new task row - Notion style */}
               {!isAddingNewTask && (
                 <tr className="hover:bg-gray-50 border-t border-gray-100">
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1176,15 +1162,15 @@ const Tasks = () => {
                       <Plus className="h-3 w-3" />
                     </Button>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-sm">
+                  <td className="px-3 py-2 text-gray-400 text-sm">
                     새 업무 추가...
                   </td>
-                  <td className="px-4 py-3"></td>
-                  <td className="px-4 py-3"></td>
-                  <td className="px-4 py-3"></td>
-                  <td className="px-4 py-3"></td>
-                  <td className="px-4 py-3"></td>
-                  <td className="px-4 py-3"></td>
+                  <td className="px-3 py-2"></td>
+                  <td className="px-3 py-2"></td>
+                  <td className="px-3 py-2"></td>
+                  <td className="px-3 py-2"></td>
+                  <td className="px-3 py-2"></td>
+                  <td className="px-3 py-2"></td>
                 </tr>
               )}
             </tbody>
