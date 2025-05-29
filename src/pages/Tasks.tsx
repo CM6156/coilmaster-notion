@@ -1,6 +1,7 @@
 import { useAppContext } from "@/context/AppContext";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useParams, useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,9 @@ import {
   Search,
   Filter,
   Download,
-  Settings
+  Settings,
+  Check,
+  X
 } from "lucide-react";
 import { Task } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -39,6 +42,8 @@ const Tasks = () => {
   } = useAppContext();
   
   const { translations } = useLanguage();
+  const { id: projectId } = useParams<{ id: string }>();
+  const location = useLocation();
   
   // State
   const [taskPhases, setTaskPhases] = useState<any[]>([]);
@@ -47,8 +52,26 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
-  const [isAddingRow, setIsAddingRow] = useState(false);
+  const [isAddingNewTask, setIsAddingNewTask] = useState(false);
   const [newTaskData, setNewTaskData] = useState<Partial<Task>>({});
+
+  // Get current project info from URL or context
+  const getCurrentProject = () => {
+    // Try to get project from URL params first
+    if (projectId) {
+      return projects.find(p => p.id === projectId);
+    }
+    
+    // Try to get project from location state
+    if (location.state?.projectId) {
+      return projects.find(p => p.id === location.state.projectId);
+    }
+    
+    // If no specific project, return null (showing all tasks)
+    return null;
+  };
+
+  const currentProject = getCurrentProject();
 
   // Load task phases
   const loadTaskPhases = async () => {
@@ -179,6 +202,11 @@ const Tasks = () => {
 
   // Handle adding new task
   const handleAddTask = async (parentTaskId?: string) => {
+    if (isAddingNewTask) {
+      // If already adding a task, save the current one first
+      await handleSaveNewTask();
+    }
+    
     // Get the next stage number
     const getNextStageNumber = () => {
       if (parentTaskId) {
@@ -203,25 +231,56 @@ const Tasks = () => {
       }
     };
 
-    const newTask: Partial<Task> = {
+    // Initialize new task data with defaults including current project
+    const defaultTaskData: Partial<Task> = {
       title: parentTaskId ? "새 하위 업무" : "새 업무",
       description: "",
       status: "할 일",
       priority: "보통",
       progress: 0,
-      projectId: "",
+      projectId: currentProject?.id || "",
       assignedTo: currentUser?.id || "",
+      department: currentUser?.department || "",
       parentTaskId: parentTaskId,
       taskPhase: getNextStageNumber(),
+      dueDate: "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
+    setNewTaskData(defaultTaskData);
+    setIsAddingNewTask(true);
+  };
+
+  // Handle saving new task
+  const handleSaveNewTask = async () => {
+    if (!newTaskData.title || newTaskData.title.trim() === "" || newTaskData.title === "새 업무" || newTaskData.title === "새 하위 업무") {
+      setIsAddingNewTask(false);
+      setNewTaskData({});
+      return;
+    }
+
     try {
-      await addTask(newTask as Task);
+      await addTask(newTaskData as Task);
+      setIsAddingNewTask(false);
+      setNewTaskData({});
     } catch (error) {
       console.error('업무 추가 오류:', error);
     }
+  };
+
+  // Handle canceling new task
+  const handleCancelNewTask = () => {
+    setIsAddingNewTask(false);
+    setNewTaskData({});
+  };
+
+  // Handle new task field update
+  const handleNewTaskUpdate = (field: string, value: any) => {
+    setNewTaskData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   // Render editable cell
@@ -316,7 +375,19 @@ const Tasks = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">업무 관리</h1>
-          <p className="text-gray-600 mt-1">전체 업무 목록 및 진행 상황</p>
+          <p className="text-gray-600 mt-1">
+            {currentProject 
+              ? `${currentProject.name} 프로젝트의 업무 목록` 
+              : "전체 업무 목록 및 진행 상황"
+            }
+          </p>
+          {currentProject && (
+            <div className="mt-2">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                📁 {currentProject.name}
+              </Badge>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
@@ -632,7 +703,7 @@ const Tasks = () => {
               })}
               
               {/* Empty state */}
-              {sortedRootTasks.length === 0 && (
+              {sortedRootTasks.length === 0 && !isAddingNewTask && (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                     <div className="text-lg font-medium mb-2">등록된 업무가 없습니다</div>
@@ -641,29 +712,206 @@ const Tasks = () => {
                 </tr>
               )}
               
+              {/* New task creation row - Notion style */}
+              {isAddingNewTask && (
+                <tr className="bg-blue-50 border-l-4 border-blue-500">
+                  {/* Save/Cancel buttons */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSaveNewTask}
+                        className="h-6 w-6 p-0 text-green-600 hover:bg-green-50"
+                      >
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelNewTask}
+                        className="h-6 w-6 p-0 text-red-600 hover:bg-red-50"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </td>
+                  
+                  {/* Stage */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {(() => {
+                          const phase = taskPhases.find(p => p.id === newTaskData.taskPhase);
+                          const stageNumber = phase?.order_index || 0;
+                          return String(stageNumber).padStart(2, '0');
+                        })()}.
+                      </span>
+                      <Select
+                        value={newTaskData.taskPhase || ''}
+                        onValueChange={(value) => handleNewTaskUpdate('taskPhase', value)}
+                      >
+                        <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {taskPhases.map((phase) => (
+                            <SelectItem key={phase.id} value={phase.id}>
+                              {phase.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </td>
+                  
+                  {/* Task Name */}
+                  <td className="px-4 py-3">
+                    <Input
+                      value={newTaskData.title || ''}
+                      onChange={(e) => handleNewTaskUpdate('title', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveNewTask();
+                        if (e.key === 'Escape') handleCancelNewTask();
+                      }}
+                      className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="업무 제목을 입력하세요..."
+                      autoFocus
+                    />
+                  </td>
+                  
+                  {/* 담당 */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Select
+                      value={newTaskData.assignedTo || ''}
+                      onValueChange={(value) => handleNewTaskUpdate('assignedTo', value)}
+                    >
+                      <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder="담당자 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...users, ...employees, ...managers].filter(person => person.id && person.name).map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  
+                  {/* 부서 */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Select
+                      value={newTaskData.department || ''}
+                      onValueChange={(value) => handleNewTaskUpdate('department', value)}
+                    >
+                      <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder="부서 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.filter(dept => dept.id && dept.name).map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  
+                  {/* Due Date */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Input
+                      type="date"
+                      value={newTaskData.dueDate || ''}
+                      onChange={(e) => handleNewTaskUpdate('dueDate', e.target.value)}
+                      className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </td>
+                  
+                  {/* 상태 */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Select
+                      value={newTaskData.status || '할 일'}
+                      onValueChange={(value) => handleNewTaskUpdate('status', value)}
+                    >
+                      <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="할 일">할 일</SelectItem>
+                        <SelectItem value="진행중">진행중</SelectItem>
+                        <SelectItem value="검토중">검토중</SelectItem>
+                        <SelectItem value="완료">완료</SelectItem>
+                        <SelectItem value="지연">지연</SelectItem>
+                        <SelectItem value="보류">보류</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  
+                  {/* 우선순위 */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Select
+                      value={newTaskData.priority || '보통'}
+                      onValueChange={(value) => handleNewTaskUpdate('priority', value)}
+                    >
+                      <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="낮음">낮음</SelectItem>
+                        <SelectItem value="보통">보통</SelectItem>
+                        <SelectItem value="높음">높음</SelectItem>
+                        <SelectItem value="긴급">긴급</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  
+                  {/* 프로젝트 */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Select
+                      value={newTaskData.projectId || ''}
+                      onValueChange={(value) => handleNewTaskUpdate('projectId', value)}
+                    >
+                      <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder={currentProject ? currentProject.name : "프로젝트 선택"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.filter(project => project.id && project.name).map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                </tr>
+              )}
+              
               {/* Add new task row - Notion style */}
-              <tr className="hover:bg-gray-50 border-t border-gray-100">
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleAddTask()}
-                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </td>
-                <td className="px-4 py-3 text-gray-400 text-sm">
-                  새 업무 추가...
-                </td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3"></td>
-              </tr>
+              {!isAddingNewTask && (
+                <tr className="hover:bg-gray-50 border-t border-gray-100">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleAddTask()}
+                      className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-sm">
+                    새 업무 추가...
+                  </td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3"></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
