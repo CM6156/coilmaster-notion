@@ -129,8 +129,8 @@ const Tasks = () => {
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = !statusFilter || task.status === statusFilter;
-    const matchesAssignee = !assigneeFilter || task.assignedTo === assigneeFilter;
+    const matchesStatus = !statusFilter || statusFilter === "all" || task.status === statusFilter;
+    const matchesAssignee = !assigneeFilter || assigneeFilter === "all" || task.assignedTo === assigneeFilter;
     
     return matchesSearch && matchesStatus && matchesAssignee;
   });
@@ -323,7 +323,7 @@ const Tasks = () => {
             <SelectValue placeholder="상태 필터" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">모든 상태</SelectItem>
+            <SelectItem value="all">모든 상태</SelectItem>
             <SelectItem value="할 일">할 일</SelectItem>
             <SelectItem value="진행중">진행중</SelectItem>
             <SelectItem value="검토중">검토중</SelectItem>
@@ -338,7 +338,7 @@ const Tasks = () => {
             <SelectValue placeholder="담당자 필터" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">모든 담당자</SelectItem>
+            <SelectItem value="all">모든 담당자</SelectItem>
             {[...users, ...employees, ...managers].filter(person => person.id && person.name).map((person) => (
               <SelectItem key={person.id} value={person.id}>
                 {person.name}
