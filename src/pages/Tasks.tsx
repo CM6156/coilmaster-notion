@@ -20,7 +20,12 @@ import {
   Download,
   Settings,
   Check,
-  X
+  X,
+  Paperclip,
+  Link,
+  Upload,
+  File,
+  ExternalLink
 } from "lucide-react";
 import { Task } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -54,6 +59,8 @@ const Tasks = () => {
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [isAddingNewTask, setIsAddingNewTask] = useState(false);
   const [newTaskData, setNewTaskData] = useState<Partial<Task>>({});
+  const [taskFiles, setTaskFiles] = useState<Record<string, { files: any[], links: string[] }>>({});
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
 
   // Get current project info from URL or context
   const getCurrentProject = () => {
@@ -231,8 +238,12 @@ const Tasks = () => {
       }
     };
 
+    // Generate temporary ID for new task
+    const tempId = `temp-${Date.now()}`;
+
     // Initialize new task data with defaults including current project
     const defaultTaskData: Partial<Task> = {
+      id: tempId,
       title: parentTaskId ? "새 하위 업무" : "새 업무",
       description: "",
       status: "할 일",
@@ -280,6 +291,52 @@ const Tasks = () => {
     setNewTaskData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (taskId: string, file: File) => {
+    const uploadingSet = new Set(uploadingFiles);
+    uploadingSet.add(taskId);
+    setUploadingFiles(uploadingSet);
+
+    try {
+      // Here you would implement actual file upload to your storage
+      // For now, we'll just simulate it
+      const fileData = {
+        id: Date.now().toString(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file) // In real implementation, this would be the uploaded file URL
+      };
+
+      setTaskFiles(prev => ({
+        ...prev,
+        [taskId]: {
+          files: [...(prev[taskId]?.files || []), fileData],
+          links: prev[taskId]?.links || []
+        }
+      }));
+    } catch (error) {
+      console.error('파일 업로드 오류:', error);
+    } finally {
+      const uploadingSet = new Set(uploadingFiles);
+      uploadingSet.delete(taskId);
+      setUploadingFiles(uploadingSet);
+    }
+  };
+
+  // Handle link addition
+  const handleAddLink = (taskId: string, link: string) => {
+    if (!link.trim()) return;
+    
+    setTaskFiles(prev => ({
+      ...prev,
+      [taskId]: {
+        files: prev[taskId]?.files || [],
+        links: [...(prev[taskId]?.links || []), link.trim()]
+      }
     }));
   };
 
@@ -351,20 +408,73 @@ const Tasks = () => {
             {value}
           </Badge>
         )}
-        {type === 'select' && field === 'priority' && (
-          <Badge variant="outline" className={cn(
-            "text-xs",
-            value === '긴급' && "bg-red-100 text-red-800 border-red-300",
-            value === '높음' && "bg-orange-100 text-orange-800 border-orange-300",
-            value === '보통' && "bg-blue-100 text-blue-800 border-blue-300",
-            value === '낮음' && "bg-gray-100 text-gray-800 border-gray-300"
-          )}>
-            <Flag className="h-3 w-3 mr-1" />
-            {value}
-          </Badge>
-        )}
         {type === 'date' && formatDate(value)}
         {type === 'text' && (value || '-')}
+      </div>
+    );
+  };
+
+  // Render file and link cell
+  const renderFileAndLinkCell = (taskId: string) => {
+    const taskData = taskFiles[taskId] || { files: [], links: [] };
+    const totalItems = taskData.files.length + taskData.links.length;
+
+    return (
+      <div className="flex items-center gap-2">
+        {totalItems > 0 && (
+          <div 
+            className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-1 py-0.5"
+            onClick={() => {
+              // Show files and links in a modal or dropdown
+              const items = [
+                ...taskData.files.map(f => `📁 ${f.name}`),
+                ...taskData.links.map(l => `🔗 ${l}`)
+              ];
+              alert(`첨부된 파일 및 링크:\n\n${items.join('\n')}`);
+            }}
+          >
+            <Paperclip className="h-3 w-3 text-gray-400" />
+            <span className="text-xs text-gray-600">{totalItems}</span>
+          </div>
+        )}
+        
+        <div className="flex items-center gap-1">
+          {/* File upload button */}
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(taskId, file);
+              }}
+              multiple
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+              asChild
+            >
+              <span>
+                <Upload className="h-3 w-3" />
+              </span>
+            </Button>
+          </label>
+
+          {/* Add link button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+            onClick={() => {
+              const link = prompt('링크 URL을 입력하세요:');
+              if (link) handleAddLink(taskId, link);
+            }}
+          >
+            <Link className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -472,7 +582,7 @@ const Tasks = () => {
                   상태
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  우선순위
+                  파일 & 링크
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   프로젝트
@@ -579,14 +689,9 @@ const Tasks = () => {
                         ])}
                       </td>
                       
-                      {/* 우선순위 */}
+                      {/* 파일 & 링크 */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {renderEditableCell(task, 'priority', task.priority, 'select', [
-                          { value: '낮음', label: '낮음' },
-                          { value: '보통', label: '보통' },
-                          { value: '높음', label: '높음' },
-                          { value: '긴급', label: '긴급' }
-                        ])}
+                        {renderFileAndLinkCell(task.id)}
                       </td>
                       
                       {/* 프로젝트 */}
@@ -679,12 +784,7 @@ const Tasks = () => {
                           </td>
                           
                           <td className="px-4 py-3 whitespace-nowrap">
-                            {renderEditableCell(childTask, 'priority', childTask.priority, 'select', [
-                              { value: '낮음', label: '낮음' },
-                              { value: '보통', label: '보통' },
-                              { value: '높음', label: '높음' },
-                              { value: '긴급', label: '긴급' }
-                            ])}
+                            {renderFileAndLinkCell(childTask.id)}
                           </td>
                           
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -705,7 +805,7 @@ const Tasks = () => {
               {/* Empty state */}
               {sortedRootTasks.length === 0 && !isAddingNewTask && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                     <div className="text-lg font-medium mb-2">등록된 업무가 없습니다</div>
                     <p className="text-sm">새 업무를 추가해보세요.</p>
                   </td>
@@ -848,22 +948,45 @@ const Tasks = () => {
                     </Select>
                   </td>
                   
-                  {/* 우선순위 */}
+                  {/* 파일 & 링크 */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <Select
-                      value={newTaskData.priority || '보통'}
-                      onValueChange={(value) => handleNewTaskUpdate('priority', value)}
-                    >
-                      <SelectTrigger className="h-8 border-0 shadow-none focus:ring-2 focus:ring-blue-500">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="낮음">낮음</SelectItem>
-                        <SelectItem value="보통">보통</SelectItem>
-                        <SelectItem value="높음">높음</SelectItem>
-                        <SelectItem value="긴급">긴급</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-1">
+                      {/* File upload button */}
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && newTaskData.id) handleFileUpload(newTaskData.id, file);
+                          }}
+                          multiple
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+                          asChild
+                        >
+                          <span>
+                            <Upload className="h-3 w-3" />
+                          </span>
+                        </Button>
+                      </label>
+
+                      {/* Add link button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
+                        onClick={() => {
+                          const link = prompt('링크 URL을 입력하세요:');
+                          if (link && newTaskData.id) handleAddLink(newTaskData.id, link);
+                        }}
+                      >
+                        <Link className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </td>
                   
                   {/* 프로젝트 */}
@@ -903,7 +1026,6 @@ const Tasks = () => {
                   <td className="px-4 py-3 text-gray-400 text-sm">
                     새 업무 추가...
                   </td>
-                  <td className="px-4 py-3"></td>
                   <td className="px-4 py-3"></td>
                   <td className="px-4 py-3"></td>
                   <td className="px-4 py-3"></td>
