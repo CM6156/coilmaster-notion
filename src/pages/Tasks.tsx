@@ -67,6 +67,8 @@ const Tasks = () => {
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [fileDialogOpen, setFileDialogOpen] = useState<string | null>(null);
   const [newLink, setNewLink] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<string | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   // Get current project info from URL or context
   const getCurrentProject = () => {
@@ -102,8 +104,53 @@ const Tasks = () => {
     }
   };
 
+  // Load task files and links
+  const loadTaskFilesAndLinks = async () => {
+    try {
+      const { data: filesData, error: filesError } = await supabase
+        .from('task_files')
+        .select('*');
+
+      const { data: linksData, error: linksError } = await supabase
+        .from('task_links')
+        .select('*');
+
+      if (filesError) throw filesError;
+      if (linksError) throw linksError;
+
+      // Group files and links by task_id
+      const taskFilesMap: Record<string, { files: any[], links: any[] }> = {};
+      
+      filesData?.forEach(file => {
+        if (!taskFilesMap[file.task_id]) {
+          taskFilesMap[file.task_id] = { files: [], links: [] };
+        }
+        taskFilesMap[file.task_id].files.push({
+          id: file.id,
+          name: file.file_name,
+          size: file.file_size,
+          type: file.file_type,
+          url: file.file_url,
+          isImage: file.is_image
+        });
+      });
+
+      linksData?.forEach(link => {
+        if (!taskFilesMap[link.task_id]) {
+          taskFilesMap[link.task_id] = { files: [], links: [] };
+        }
+        taskFilesMap[link.task_id].links.push(link.url);
+      });
+
+      setTaskFiles(taskFilesMap);
+    } catch (error) {
+      console.error('파일 및 링크 로드 오류:', error);
+    }
+  };
+
   useEffect(() => {
     loadTaskPhases();
+    loadTaskFilesAndLinks();
   }, []);
 
   // Helper functions
@@ -307,22 +354,45 @@ const Tasks = () => {
     setUploadingFiles(uploadingSet);
 
     try {
-      const fileDataArray = Array.from(files).map(file => ({
-        id: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-        isImage: file.type.startsWith('image/')
-      }));
+      for (const file of Array.from(files)) {
+        // Create a temporary URL for immediate display
+        const tempUrl = URL.createObjectURL(file);
+        
+        // Save file info to database
+        const { data, error } = await supabase
+          .from('task_files')
+          .insert({
+            task_id: taskId,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            file_url: tempUrl, // In production, upload to storage first
+            is_image: file.type.startsWith('image/'),
+            uploaded_by: currentUser?.id
+          })
+          .select()
+          .single();
 
-      setTaskFiles(prev => ({
-        ...prev,
-        [taskId]: {
-          files: [...(prev[taskId]?.files || []), ...fileDataArray],
-          links: prev[taskId]?.links || []
-        }
-      }));
+        if (error) throw error;
+
+        // Update local state
+        const fileData = {
+          id: data.id,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: tempUrl,
+          isImage: file.type.startsWith('image/')
+        };
+
+        setTaskFiles(prev => ({
+          ...prev,
+          [taskId]: {
+            files: [...(prev[taskId]?.files || []), fileData],
+            links: prev[taskId]?.links || []
+          }
+        }));
+      }
     } catch (error) {
       console.error('파일 업로드 오류:', error);
     } finally {
@@ -333,25 +403,120 @@ const Tasks = () => {
   };
 
   // Handle file removal
-  const handleRemoveFile = (taskId: string, fileId: string) => {
-    setTaskFiles(prev => ({
-      ...prev,
-      [taskId]: {
-        files: prev[taskId]?.files.filter(f => f.id !== fileId) || [],
-        links: prev[taskId]?.links || []
-      }
-    }));
+  const handleRemoveFile = async (taskId: string, fileId: string) => {
+    try {
+      const { error } = await supabase
+        .from('task_files')
+        .delete()
+        .eq('id', fileId);
+
+      if (error) throw error;
+
+      setTaskFiles(prev => ({
+        ...prev,
+        [taskId]: {
+          files: prev[taskId]?.files.filter(f => f.id !== fileId) || [],
+          links: prev[taskId]?.links || []
+        }
+      }));
+    } catch (error) {
+      console.error('파일 삭제 오류:', error);
+    }
+  };
+
+  // Handle link addition
+  const handleAddLink = async (taskId: string, link: string) => {
+    if (!link.trim()) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('task_links')
+        .insert({
+          task_id: taskId,
+          url: link.trim(),
+          created_by: currentUser?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTaskFiles(prev => ({
+        ...prev,
+        [taskId]: {
+          files: prev[taskId]?.files || [],
+          links: [...(prev[taskId]?.links || []), link.trim()]
+        }
+      }));
+    } catch (error) {
+      console.error('링크 추가 오류:', error);
+    }
   };
 
   // Handle link removal
-  const handleRemoveLink = (taskId: string, linkIndex: number) => {
-    setTaskFiles(prev => ({
-      ...prev,
-      [taskId]: {
-        files: prev[taskId]?.files || [],
-        links: prev[taskId]?.links.filter((_, index) => index !== linkIndex) || []
+  const handleRemoveLink = async (taskId: string, linkIndex: number) => {
+    try {
+      const links = taskFiles[taskId]?.links || [];
+      const linkToRemove = links[linkIndex];
+      
+      const { error } = await supabase
+        .from('task_links')
+        .delete()
+        .eq('task_id', taskId)
+        .eq('url', linkToRemove);
+
+      if (error) throw error;
+
+      setTaskFiles(prev => ({
+        ...prev,
+        [taskId]: {
+          files: prev[taskId]?.files || [],
+          links: prev[taskId]?.links.filter((_, index) => index !== linkIndex) || []
+        }
+      }));
+    } catch (error) {
+      console.error('링크 삭제 오류:', error);
+    }
+  };
+
+  // Handle task deletion
+  const handleDeleteTask = async (taskId: string) => {
+    setDeletingTaskId(taskId);
+    try {
+      // Delete associated files and links first
+      await supabase.from('task_files').delete().eq('task_id', taskId);
+      await supabase.from('task_links').delete().eq('task_id', taskId);
+      
+      // Delete child tasks first (if any)
+      const childTasks = tasks.filter(t => t.parentTaskId === taskId);
+      for (const childTask of childTasks) {
+        await handleDeleteTask(childTask.id);
       }
-    }));
+      
+      // Delete the task from database
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      // Update local state by removing the task from context
+      // This will trigger a re-render
+      window.location.reload(); // Simple refresh for now
+      
+    } catch (error) {
+      console.error('업무 삭제 오류:', error);
+      alert('업무 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingTaskId(null);
+      setDeleteDialogOpen(null);
+    }
+  };
+
+  // Confirm delete dialog
+  const confirmDelete = (taskId: string) => {
+    setDeleteDialogOpen(taskId);
   };
 
   // Get file icon based on type
@@ -369,28 +534,20 @@ const Tasks = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Handle link addition
-  const handleAddLink = (taskId: string, link: string) => {
-    if (!link.trim()) return;
-    
-    setTaskFiles(prev => ({
-      ...prev,
-      [taskId]: {
-        files: prev[taskId]?.files || [],
-        links: [...(prev[taskId]?.links || []), link.trim()]
-      }
-    }));
-  };
-
   // Render editable cell
   const renderEditableCell = (task: Task, field: string, value: any, type: 'text' | 'select' | 'date' = 'text', options?: any[]) => {
     const isEditing = editingCell?.taskId === task.id && editingCell?.field === field;
 
     if (isEditing) {
       if (type === 'select') {
+        // For select fields, use the actual ID value, not the display name
+        const actualValue = field === 'assignedTo' ? task.assignedTo : 
+                           field === 'department' ? task.department :
+                           field === 'projectId' ? task.projectId : value;
+        
         return (
           <Select
-            value={value || ''}
+            value={actualValue || ''}
             onValueChange={(newValue) => handleCellUpdate(task.id, field, newValue)}
             onOpenChange={(open) => !open && setEditingCell(null)}
           >
@@ -410,7 +567,7 @@ const Tasks = () => {
         return (
           <Input
             type="date"
-            value={value || ''}
+            value={(task[field as keyof Task] as string) || ''}
             onChange={(e) => handleCellUpdate(task.id, field, e.target.value)}
             onBlur={() => setEditingCell(null)}
             onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
@@ -421,7 +578,7 @@ const Tasks = () => {
       } else {
         return (
           <Input
-            value={value || ''}
+            value={(task[field as keyof Task] as string) || ''}
             onChange={(e) => handleCellUpdate(task.id, field, e.target.value)}
             onBlur={() => setEditingCell(null)}
             onKeyDown={(e) => e.key === 'Enter' && setEditingCell(null)}
@@ -450,8 +607,13 @@ const Tasks = () => {
             {value}
           </Badge>
         )}
+        {type === 'select' && field !== 'status' && (
+          <span className="text-sm">{value}</span>
+        )}
         {type === 'date' && formatDate(value)}
-        {type === 'text' && (value || '-')}
+        {type === 'text' && (
+          <span className="text-sm">{value || '-'}</span>
+        )}
       </div>
     );
   };
@@ -737,6 +899,9 @@ const Tasks = () => {
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   프로젝트
                 </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                  작업
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -802,16 +967,22 @@ const Tasks = () => {
                       
                       {/* 담당 */}
                       <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
-                          <span className="text-sm">{getAssigneeName(task.assignedTo)}</span>
-                        </div>
+                        {renderEditableCell(task, 'assignedTo', getAssigneeName(task.assignedTo), 'select', 
+                          [...users, ...employees, ...managers].filter(person => person.id && person.name).map(person => ({
+                            value: person.id,
+                            label: person.name
+                          }))
+                        )}
                       </td>
                       
                       {/* 부서 */}
                       <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
-                          <span className="text-sm">{getDepartmentName(task.department)}</span>
-                        </div>
+                        {renderEditableCell(task, 'department', getDepartmentName(task.department), 'select',
+                          departments.filter(dept => dept.id && dept.name).map(dept => ({
+                            value: dept.id,
+                            label: dept.name
+                          }))
+                        )}
                       </td>
                       
                       {/* Due Date */}
@@ -844,6 +1015,20 @@ const Tasks = () => {
                             label: project.name
                           }))
                         )}
+                      </td>
+                      
+                      {/* Action */}
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmDelete(task.id)}
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                     
@@ -893,15 +1078,21 @@ const Tasks = () => {
                           </td>
                           
                           <td className="px-3 py-2 whitespace-nowrap">
-                            <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
-                              <span className="text-sm">{getAssigneeName(childTask.assignedTo)}</span>
-                            </div>
+                            {renderEditableCell(childTask, 'assignedTo', getAssigneeName(childTask.assignedTo), 'select', 
+                              [...users, ...employees, ...managers].filter(person => person.id && person.name).map(person => ({
+                                value: person.id,
+                                label: person.name
+                              }))
+                            )}
                           </td>
                           
                           <td className="px-3 py-2 whitespace-nowrap">
-                            <div className="min-h-[32px] px-2 py-1 cursor-pointer hover:bg-gray-50 rounded flex items-center">
-                              <span className="text-sm">{getDepartmentName(childTask.department)}</span>
-                            </div>
+                            {renderEditableCell(childTask, 'department', getDepartmentName(childTask.department), 'select',
+                              departments.filter(dept => dept.id && dept.name).map(dept => ({
+                                value: dept.id,
+                                label: dept.name
+                              }))
+                            )}
                           </td>
                           
                           <td className="px-3 py-2 whitespace-nowrap">
@@ -931,6 +1122,20 @@ const Tasks = () => {
                               }))
                             )}
                           </td>
+                          
+                          {/* Action */}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => confirmDelete(childTask.id)}
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -941,7 +1146,7 @@ const Tasks = () => {
               {/* Empty state */}
               {sortedRootTasks.length === 0 && !isAddingNewTask && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-3 py-8 text-center text-gray-500">
                     <div className="text-lg font-medium mb-2">등록된 업무가 없습니다</div>
                     <p className="text-sm">새 업무를 추가해보세요.</p>
                   </td>
@@ -1148,35 +1353,50 @@ const Tasks = () => {
                   </td>
                 </tr>
               )}
-              
-              {/* Add new task row - Notion style */}
-              {!isAddingNewTask && (
-                <tr className="hover:bg-gray-50 border-t border-gray-100">
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleAddTask()}
-                      className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </td>
-                  <td className="px-3 py-2 text-gray-400 text-sm">
-                    새 업무 추가...
-                  </td>
-                  <td className="px-3 py-2"></td>
-                  <td className="px-3 py-2"></td>
-                  <td className="px-3 py-2"></td>
-                  <td className="px-3 py-2"></td>
-                  <td className="px-3 py-2"></td>
-                  <td className="px-3 py-2"></td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen !== null} onOpenChange={(open) => !open && setDeleteDialogOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">업무 삭제 확인</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">이 업무를 정말 삭제하시겠습니까?</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  삭제된 업무는 복구할 수 없으며, 하위 업무와 첨부파일도 함께 삭제됩니다.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(null)}
+                disabled={deletingTaskId !== null}
+              >
+                취소
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteDialogOpen && handleDeleteTask(deleteDialogOpen)}
+                disabled={deletingTaskId !== null}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deletingTaskId ? "삭제 중..." : "삭제"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
