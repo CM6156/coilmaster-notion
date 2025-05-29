@@ -179,8 +179,32 @@ const Tasks = () => {
 
   // Handle adding new task
   const handleAddTask = async (parentTaskId?: string) => {
+    // Get the next stage number
+    const getNextStageNumber = () => {
+      if (parentTaskId) {
+        // For child tasks, use the same stage as parent
+        const parentTask = tasks.find(t => t.id === parentTaskId);
+        return parentTask?.taskPhase || taskPhases[0]?.id;
+      } else {
+        // For root tasks, find the highest stage number and increment
+        const maxStageOrder = Math.max(
+          ...tasks
+            .filter(t => !t.parentTaskId)
+            .map(t => {
+              const phase = taskPhases.find(p => p.id === t.taskPhase);
+              return phase?.order_index || 0;
+            }),
+          0
+        );
+        
+        // Find the phase with the next order index
+        const nextPhase = taskPhases.find(p => p.order_index === maxStageOrder + 1);
+        return nextPhase?.id || taskPhases[0]?.id;
+      }
+    };
+
     const newTask: Partial<Task> = {
-      title: "새 업무",
+      title: parentTaskId ? "새 하위 업무" : "새 업무",
       description: "",
       status: "할 일",
       priority: "보통",
@@ -188,6 +212,7 @@ const Tasks = () => {
       projectId: "",
       assignedTo: currentUser?.id || "",
       parentTaskId: parentTaskId,
+      taskPhase: getNextStageNumber(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -615,6 +640,30 @@ const Tasks = () => {
                   </td>
                 </tr>
               )}
+              
+              {/* Add new task row - Notion style */}
+              <tr className="hover:bg-gray-50 border-t border-gray-100">
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAddTask()}
+                    className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </td>
+                <td className="px-4 py-3 text-gray-400 text-sm">
+                  새 업무 추가...
+                </td>
+                <td className="px-4 py-3"></td>
+                <td className="px-4 py-3"></td>
+                <td className="px-4 py-3"></td>
+                <td className="px-4 py-3"></td>
+                <td className="px-4 py-3"></td>
+                <td className="px-4 py-3"></td>
+                <td className="px-4 py-3"></td>
+              </tr>
             </tbody>
           </table>
         </div>
