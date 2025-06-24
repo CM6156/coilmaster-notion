@@ -125,6 +125,54 @@ export interface GlobalTranslations {
   // Status management specific
   projectStatus?: string;
   taskStatus?: string;
+  
+  // Position translations
+  position_staff?: string;
+  position_associate?: string;
+  position_assistant_manager?: string;
+  position_manager?: string;
+  position_deputy_manager?: string;
+  position_general_manager?: string;
+  position_director?: string;
+  position_executive_director?: string;
+  position_managing_director?: string;
+  position_vice_president?: string;
+  position_president?: string;
+  position_chairman?: string;
+  position_intern?: string;
+  position_contractor?: string;
+  position_freelancer?: string;
+  
+  // Department translations
+  department_development?: string;
+  department_planning?: string;
+  department_sales?: string;
+  department_hr?: string;
+  department_finance?: string;
+  department_operations?: string;
+  department_qa?: string;
+  department_design?: string;
+  department_marketing?: string;
+  department_administration?: string;
+  
+  // Additional position translations (current system)
+  position_employee?: string;
+  position_senior_staff?: string;
+  position_pro?: string;
+  position_leader?: string;
+  position_mentor?: string;
+  position_md?: string;
+  position_ceo?: string;
+  position_founder?: string;
+  
+  // Additional department translations (current system)
+  department_digital_m?: string;
+  department_procurement?: string;
+  department_server_management?: string;
+  department_management?: string;
+  department_it?: string;
+  department_quality?: string;
+  department_production?: string;
   priorityLevel?: string;
   statusName?: string;
   statusColor?: string;
@@ -197,6 +245,8 @@ export interface GlobalTranslations {
 export interface SidebarTranslations {
   dashboard?: string;
   projects?: string;
+  employees?: string;
+  employees_list?: string;
   tasks?: string;
   team?: string;
   calendar?: string;
@@ -227,6 +277,13 @@ export interface SidebarTranslations {
   systemStatus?: string;
   serverStatus?: string;
   currentPage?: string;
+  managers?: string;
+  managersJournal?: string;
+  allJournals?: string;
+  onlineUsers?: string;
+  workJournal?: string;
+  myWorkJournal?: string;
+  allWorkJournal?: string;
 }
 
 export interface NotificationTranslations {
@@ -521,6 +578,24 @@ export interface TasksTranslations {
     journalCreated?: string;
     journalCreatedDesc?: string;
   };
+  
+  // Tasks Database page related
+  taskDatabase?: string;
+  taskDatabaseSubtitle?: string;
+  readOnlyMode?: string;
+  searchTasks?: string;
+  stage?: string;
+  taskName?: string;
+  assignee?: string;
+  stageUnassigned?: string;
+  unassigned?: string;
+  daysDelayed?: string;
+  normal?: string;
+  dataLink?: string;
+  noSearchResults?: string;
+  tryDifferentSearch?: string;
+  databaseInfo?: string;
+  databaseDescription?: string;
 }
 
 export interface TaskDetailsTranslations {
@@ -659,12 +734,57 @@ export interface ProjectsTranslations {
   statusActive?: string;
   statusDelayed?: string;
   statusOnHold?: string;
+  statusNotStarted?: string;
+  statusInProgress?: string;
   phasePlanning?: string;
   phaseDevelopment?: string;
   phaseManufacturing?: string;
   phaseQuality?: string;
   phaseProduction?: string;
   phaseSales?: string;
+  
+  // Promotion stage translations
+  promotionStagePromotion?: string;
+  promotionStageSample?: string;
+  promotionStage1stVerification?: string;
+  promotionStageDesignVerification?: string;
+  promotionStageSetVerification?: string;
+  promotionStageApproval?: string;
+  promotionStageOrder?: string;
+  promotionStageDrop?: string;
+  
+  // Project type translations
+  projectType11?: string;
+  projectType12?: string;
+  projectType21?: string;
+  projectType31?: string;
+  projectType32?: string;
+  projectType41?: string;
+  projectType42?: string;
+  projectType51?: string;
+  projectType61?: string;
+  projectType71?: string;
+  projectType72?: string;
+  projectType81?: string;
+  projectType91?: string;
+  
+  // Table headers
+  tableProject?: string;
+  tablePromotionStage?: string;
+  tableProgress?: string;
+  tableStartDate?: string;
+  tableDueDate?: string;
+  tableRemainingTime?: string;
+  tableManager?: string;
+  
+  // Common terms
+  all?: string;
+  projectsCount?: string;
+  averageProgress?: string;
+  totalRatio?: string;
+  daysDelayed?: string;
+  daysRemaining?: string;
+  
   clientName?: string;
   projectType?: string;
   assignedDepartment?: string;
@@ -694,6 +814,28 @@ export interface ProjectsTranslations {
   completionRateLabel?: string;
   recentProjects?: string;
   details?: string;
+  
+  // MyProjects 페이지 관련
+  myProjects?: string;
+  myProjectsSubtitle?: string;
+  totalProjectsCount?: string;
+  searchProjectsPlaceholder?: string;
+  statusFilter?: string;
+  assigneeFilter?: string;
+  allStatuses?: string;
+  allAssignees?: string;
+  sortByName?: string;
+  sortByDueDate?: string;
+  sortByProgress?: string;
+  tabOverdue?: string;
+  tabInProgress?: string;
+  tabCompleted?: string;
+  tabTimeline?: string;
+  excellentMessage?: string;
+  noOverdueProjects?: string;
+  urgent?: string;
+  planning?: string;
+  onHold?: string;
 }
 
 export interface CalendarTranslations {
@@ -1080,6 +1222,11 @@ export interface Department {
   id: string;
   name: string;
   code: string;
+  description?: string;
+  translation_key?: string;
+  name_en?: string;
+  name_zh?: string;
+  name_th?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1131,6 +1278,7 @@ export interface User {
   corporation?: string;
   password?: string;
   isActive?: boolean;
+  timezone?: string;
 }
 
 export interface Client {
@@ -1191,6 +1339,7 @@ export interface Project {
   annualQuantity?: number;
   annualAmount?: number;
   promotionStatus?: PromotionStatuses;
+  promotionStage?: 'Promotion' | 'Sample' | '1차검증' | '설계검증' | 'Set검증' | '승인' | '수주' | 'Drop';
   competitor?: string;
   issueCorporation?: string;
   completed?: boolean;
@@ -1211,36 +1360,52 @@ export interface TaskAssignee {
 export interface Task {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   status: string;
   priority: string;
   progress: number;
   startDate: string;
   dueDate: string;
   projectId: string;
-  assignedTo: string; // 하위 호환성을 위해 유지 (주 담당자 ID)
-  assignees?: TaskAssignee[]; // 다중 담당자 배열
-  department: string;
-  createdAt: string;
-  updatedAt?: string;
+  assignedTo?: string;
+  assignees?: TaskAssignee[];
+  department?: string;
+  taskPhase?: string;
   parentTaskId?: string;
-  subtasks?: Task[]; // Added for mockData
-  taskPhase?: string; // 업무 단계 ID 추가
-  // 완료 관련 필드들
-  completionContent?: string;
-  completionFiles?: {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    url?: string;
-  }[];
-  completionLinks?: {
-    id: string;
-    title: string;
-    url: string;
-  }[];
-  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  completionFiles?: TaskFile[];
+  completionLinks?: TaskLink[];
+  attachments?: TaskAttachment[];
+}
+
+export interface TaskFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  uploadedAt?: string;
+}
+
+export interface TaskLink {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  createdAt?: string;
+}
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  file_id?: string;
+  link_url?: string;
+  link_title?: string;
+  link_description?: string;
+  attachment_type: 'file' | 'link';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Notification {
@@ -1252,6 +1417,14 @@ export interface Notification {
   timestamp: string;
   createdAt: string;
   relatedId?: string; // Added for use-journal.ts
+  metadata?: {
+    userTimezone?: string;
+    isOptimalTime?: boolean;
+    scheduleDelay?: number;
+    originalMessage?: string;
+    formattedTime?: string;
+    [key: string]: any;
+  };
 }
 
 export interface DailyReport {
@@ -1328,6 +1501,8 @@ export interface Translations {
   calendar: CalendarTranslations;
   admin: AdminTranslations;
   profile: ProfileTranslations;
+  managers?: any;
+  workJournals?: any;
   journal?: TasksTranslations['journal'];
 }
 
@@ -1336,6 +1511,11 @@ export interface Position {
   name: string;
   code: string;
   level: number;
+  description?: string;
+  translation_key?: string;
+  name_en?: string;
+  name_zh?: string;
+  name_th?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1369,6 +1549,8 @@ export interface Employee {
   corporation_id?: string;
   department_id?: string;
   position_id?: string;
+  avatar?: string;
+  profile_image?: string;
   created_at: string;
   updated_at: string;
   // 관계형 데이터
@@ -1381,12 +1563,30 @@ export interface Manager {
   id: string;
   name: string;
   email: string;
-  department: {
-  id: string;
-  name: string;
-  };
+  phone?: string;
+  department_id?: string;
+  corporation_id?: string;
+  position_id?: string;
+  is_active?: boolean;
+  profile_image?: string;
   created_at: string;
   updated_at: string;
+  // 관계형 데이터 (JOIN으로 가져온 데이터)
+  department?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+  corporation?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+  position?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
 }
 
 // 새 항목 생성을 위한 타입
@@ -1396,7 +1596,12 @@ export type CreateUserInput = Omit<User, 'id' | 'created_at' | 'updated_at'> & {
 
 export type CreateEmployeeInput = Omit<Employee, 'id' | 'created_at' | 'updated_at'>;
 
-export type CreateManagerInput = Omit<Manager, 'id' | 'created_at' | 'updated_at'>;
+export type CreateManagerInput = Omit<Manager, 'id' | 'created_at' | 'updated_at' | 'department' | 'corporation' | 'position'> & {
+  department_id?: string;
+  corporation_id?: string;
+  position_id?: string;
+  profile_image?: string;
+};
 
 export type CreateClientInput = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
 
@@ -1411,12 +1616,20 @@ export type CreateCorporationInput = Omit<Corporation, 'id' | 'created_at' | 'up
 // 업무 일지 관련 타입
 export interface WorkJournal {
   id: string;
-  project_id: string;
-  task_id: string;
+  project_id?: string;
+  task_id?: string;
   content: string;
   status: 'not-started' | 'in-progress' | 'delayed' | 'completed';
-  author_id: string;
-  author_name: string;
+  user_id: string;
+  author_id?: string; // 하위 호환성을 위해 유지
+  author_name?: string;
+  date?: string;
+  title?: string;
+  work_hours?: number;
+  overtime_hours?: number;
+  category?: string;
+  has_attachments?: boolean;
+  attachment_count?: number;
   created_at: string;
   updated_at: string;
   // 관계형 데이터
@@ -1459,4 +1672,88 @@ export interface JournalEntry {
   department?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// 댓글 첨부파일 타입
+export interface TaskCommentAttachment {
+  id: string;
+  comment_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  public_url?: string;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 댓글 및 진행도 업데이트 관련 타입
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  content: string;
+  progress_update?: number;
+  attachments?: TaskCommentAttachment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateTaskCommentInput = Omit<TaskComment, 'id' | 'created_at' | 'updated_at' | 'attachments'> & {
+  attachments?: File[];
+};
+
+// 업무일지 관련 타입 정의
+export interface WorkLog {
+  id: string;
+  user_id: string;
+  title: string;
+  content?: string;
+  log_date: string; // YYYY-MM-DD 형식
+  status: '진행중' | '완료' | '보류';
+  priority: '높음' | '보통' | '낮음';
+  tags?: string[];
+  attachments?: WorkLogAttachment[];
+  created_at: string;
+  updated_at: string;
+  // 관계형 데이터
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    department?: string;
+    avatar?: string;
+  };
+}
+
+export interface WorkLogAttachment {
+  id: string;
+  work_log_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  uploaded_at: string;
+}
+
+export type CreateWorkLogInput = Omit<WorkLog, 'id' | 'created_at' | 'updated_at' | 'user' | 'attachments'> & {
+  attachments?: File[];
+};
+
+export type UpdateWorkLogInput = Partial<CreateWorkLogInput> & {
+  id: string;
+};
+
+// 업무일지 통계 타입
+export interface WorkLogStats {
+  user_name: string;
+  user_id: string;
+  total_logs: number;
+  completed_logs: number;
+  in_progress_logs: number;
+  on_hold_logs: number;
+  completion_rate: number;
 }

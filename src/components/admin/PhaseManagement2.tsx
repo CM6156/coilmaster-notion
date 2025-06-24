@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAppContext } from "@/context/AppContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "@/hooks/use-toast";
@@ -41,10 +43,13 @@ const PhaseManagement2 = () => {
     deletePhase
   } = useAppContext();
   
-  const [loading, setLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPhase, setEditingPhase] = useState<Phase | TaskPhase | null>(null);
+  // 상태 관리
   const [tab, setTab] = useState<'project' | 'task'>('project');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [phaseToDelete, setPhaseToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [editingPhase, setEditingPhase] = useState<Phase | TaskPhase | null>(null);
+  const [loading, setLoading] = useState(false);
   const [taskPhases, setTaskPhases] = useState<TaskPhase[]>([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -64,6 +69,46 @@ const PhaseManagement2 = () => {
     { value: '#ec4899', label: 'Pink', name: '분홍' },
     { value: '#6b7280', label: 'Gray', name: '회색' },
   ];
+
+  // 업무 단계 관련 함수들을 컴포넌트 내에서 구현
+  const createTaskPhase = async (data: Omit<TaskPhase, 'id' | 'created_at' | 'updated_at'>) => {
+    const { error } = await supabase
+      .from('task_phases')
+      .insert([{
+        ...data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]);
+    
+    if (error) throw error;
+    await loadTaskPhases();
+  };
+
+  const updateTaskPhase = async (id: string, data: Partial<TaskPhase>) => {
+    const { error } = await supabase
+      .from('task_phases')
+      .update({
+        ...data,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+    
+    if (error) throw error;
+    await loadTaskPhases();
+  };
+
+  const deleteTaskPhase = async (id: string) => {
+    const { error } = await supabase
+      .from('task_phases')
+      .update({ 
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+    
+    if (error) throw error;
+    await loadTaskPhases();
+  };
 
   // 업무 단계 로드
   const loadTaskPhases = async () => {
@@ -91,38 +136,6 @@ const PhaseManagement2 = () => {
 
   // 현재 탭에 따른 데이터
   const currentPhases = tab === 'project' ? projectPhases : taskPhases;
-
-  // 업무 단계 생성
-  const createTaskPhase = async (data: Omit<TaskPhase, 'id' | 'created_at' | 'updated_at'>) => {
-    const { error } = await supabase
-      .from('task_phases')
-      .insert([data]);
-    
-    if (error) throw error;
-    await loadTaskPhases();
-  };
-
-  // 업무 단계 수정
-  const updateTaskPhase = async (id: string, data: Partial<TaskPhase>) => {
-    const { error } = await supabase
-      .from('task_phases')
-      .update(data)
-      .eq('id', id);
-    
-    if (error) throw error;
-    await loadTaskPhases();
-  };
-
-  // 업무 단계 삭제
-  const deleteTaskPhase = async (id: string) => {
-    const { error } = await supabase
-      .from('task_phases')
-      .update({ is_active: false })
-      .eq('id', id);
-    
-    if (error) throw error;
-    await loadTaskPhases();
-  };
 
   // 폼 리셋 함수
   const resetForm = useCallback(() => {
@@ -242,31 +255,38 @@ const PhaseManagement2 = () => {
   }, []);
 
   // 삭제 처리
-  const handleDelete = useCallback(async (id: string) => {
-    if (window.confirm("정말로 이 단계를 삭제하시겠습니까?")) {
-      try {
-        setLoading(true);
-        if (tab === 'project') {
-          await deletePhase(id);
-        } else {
-          await deleteTaskPhase(id);
-        }
-        toast({
-          title: "성공",
-          description: "단계가 성공적으로 삭제되었습니다"
-        });
-      } catch (error) {
-        console.error('Error deleting phase:', error);
-        toast({
-          title: "오류",
-          description: "단계 삭제 중 오류가 발생했습니다",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    setPhaseToDelete({ id, name });
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!phaseToDelete) return;
+    
+    try {
+      setLoading(true);
+      if (tab === 'project') {
+        await deletePhase(phaseToDelete.id);
+      } else {
+        await deleteTaskPhase(phaseToDelete.id);
       }
+      toast({
+        title: "성공",
+        description: "단계가 성공적으로 삭제되었습니다"
+      });
+    } catch (error) {
+      console.error('Error deleting phase:', error);
+      toast({
+        title: "오류",
+        description: "단계 삭제 중 오류가 발생했습니다",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+      setIsDeleteDialogOpen(false);
+      setPhaseToDelete(null);
     }
-  }, [deletePhase, deleteTaskPhase, tab]);
+  }, [phaseToDelete, deletePhase, deleteTaskPhase, tab]);
 
   const PhaseCard = ({ phase }: { phase: Phase | TaskPhase }) => {
     const order = 'order' in phase ? phase.order : (phase as TaskPhase).order_index;
@@ -297,7 +317,7 @@ const PhaseManagement2 = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleDelete(phase.id)}
+                onClick={() => handleDelete(phase.id, phase.name)}
                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
@@ -514,6 +534,30 @@ const PhaseManagement2 = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 삭제 모달 다이얼로그 */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>단계 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`"${phaseToDelete?.name}" 단계를 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={loading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -255,7 +255,10 @@ export const TaskCompletionDialog = ({ task, open, onOpenChange, onTaskCompleted
               </div>
               <div>
                 <span className="font-medium text-sm">설명:</span>
-                <p className="text-sm text-muted-foreground mt-1">{task.description || '설명 없음'}</p>
+                <div 
+                  className="text-sm text-muted-foreground mt-1 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: task.description || '설명 없음' }}
+                />
               </div>
             </CardContent>
           </Card>

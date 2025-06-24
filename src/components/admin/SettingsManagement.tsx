@@ -370,85 +370,36 @@ export default function SettingsManagement() {
     console.log('💾 시스템 설정 저장 시작:', settings);
     
     try {
-      // 1. 현재 사용자 및 역할 확인
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔐 현재 사용자:', user);
+      let results: any[] = [];
       
-      if (!user) {
-        throw new Error('사용자가 인증되지 않았습니다.');
-      }
-
-      // 2. 사용자 정보 가져오기
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role, name, email')
-        .eq('id', user.id)
-        .single();
-      
-      console.log('👤 사용자 정보:', userData, userError);
-
-      // 3. 관리자 권한 확인
-      if (userData?.role !== 'admin') {
-        console.warn('⚠️ 관리자 권한이 없습니다. 역할:', userData?.role);
-        // 관리자가 아니어도 일단 시도해보기 (RLS 정책에서 판단)
-      }
-
-      // 4. 각 설정을 개별적으로 저장 (upsert 방식)
-      const results = [];
+      // 각 설정을 순차적으로 저장
       for (const [key, value] of Object.entries(settings)) {
-        console.log(`📝 저장 중: ${key} = ${value}`);
+        console.log(`🔧 Saving setting: ${key} = ${value}`);
         
         try {
-          // 먼저 기존 설정이 있는지 확인
-          const { data: existing, error: selectError } = await supabase
+          // upsert 방식으로 저장 (있으면 업데이트, 없으면 생성)
+          const { data: upsertData, error: upsertError } = await supabase
             .from('system_settings')
-            .select('*')
-            .eq('setting_key', key)
-            .maybeSingle();
+            .upsert({
+              key: key,
+              setting_key: key,
+              setting_value: String(value),
+              is_public: true,
+              description: `${key} 설정`,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'setting_key'
+            })
+            .select();
           
-          console.log(`🔍 기존 설정 확인 [${key}]:`, existing, selectError);
-
-          if (existing) {
-            // 기존 설정이 있으면 업데이트
-            const { data: updateData, error: updateError } = await supabase
-              .from('system_settings')
-              .update({
-                setting_value: String(value),
-                updated_at: new Date().toISOString()
-              })
-              .eq('setting_key', key)
-              .select();
-            
-            console.log(`✏️ 업데이트 결과 [${key}]:`, updateData, updateError);
-            
-            if (updateError) {
-              console.error(`❌ 업데이트 실패 [${key}]:`, updateError);
-              throw updateError;
-            }
-            
-            results.push({ key, action: 'update', success: true, data: updateData });
-          } else {
-            // 기존 설정이 없으면 새로 생성
-            const { data: insertData, error: insertError } = await supabase
-              .from('system_settings')
-              .insert({
-                setting_key: key,
-                setting_value: String(value),
-                setting_type: 'string',
-                is_public: true,
-                description: `${key} 설정`
-              })
-              .select();
-            
-            console.log(`➕ 생성 결과 [${key}]:`, insertData, insertError);
-            
-            if (insertError) {
-              console.error(`❌ 생성 실패 [${key}]:`, insertError);
-              throw insertError;
-            }
-            
-            results.push({ key, action: 'insert', success: true, data: insertData });
+          console.log(`✅ Upsert 결과 [${key}]:`, upsertData, upsertError);
+          
+          if (upsertError) {
+            console.error(`❌ Upsert 실패 [${key}]:`, upsertError);
+            throw upsertError;
           }
+          
+          results.push({ key, action: 'upsert', success: true, data: upsertData });
         } catch (error: any) {
           console.error(`❌ 설정 저장 실패 [${key}]:`, error);
           results.push({ key, action: 'failed', success: false, error: error.message });
@@ -468,7 +419,8 @@ export default function SettingsManagement() {
       
       if (successful.length > 0) {
         console.log('✅ 저장 성공한 설정:', successful);
-        alert(`${successful.length}개 설정이 성공적으로 저장되었습니다.`);
+        setSuccessMessage(`${successful.length}개 설정이 성공적으로 저장되었습니다.`);
+        setShowSuccessModal(true);
       }
       
       return { success: successful.length > 0, results };
@@ -574,7 +526,6 @@ export default function SettingsManagement() {
       
       setTimeout(() => {
         setIsLoading(false);
-        setShowSuccessModal(true);
         setLastSaved(new Date());
         setSaveProgress(0);
       }, 500);
@@ -635,7 +586,7 @@ export default function SettingsManagement() {
     }
   };
 
-
+  const [successMessage, setSuccessMessage] = useState("");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
@@ -1179,34 +1130,16 @@ export default function SettingsManagement() {
 
       {/* 저장 성공 모달 */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="sm:max-w-md border-0 shadow-2xl">
+        <DialogContent className="max-w-md text-center">
           <DialogHeader>
-            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full">
-              <CheckCircle className="w-8 h-8 text-white" />
-            </div>
-            <DialogTitle className="text-center text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              저장 완료!
-            </DialogTitle>
-            <DialogDescription className="text-center text-lg">
-              <span className="font-semibold text-gray-700">{savedCategory}</span> 설정이 성공적으로 저장되었습니다.
-              <br />
-              {lastSaved && (
-                <div className="text-sm text-green-600 mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                  <span className="font-medium">저장 완료:</span> {lastSaved.toLocaleString('ko-KR')}
-                </div>
-              )}
-              <span className="text-sm text-gray-500 mt-2 block">모든 팀원에게 변경사항이 동기화됩니다.</span>
+            <DialogTitle>🎉 저장 완료!</DialogTitle>
+            <DialogDescription>
+              {successMessage}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-center">
-            <Button 
-              onClick={handleCloseModal} 
-              className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg"
-            >
-              <UserCheck className="h-4 w-4 mr-2" />
-              확인
-            </Button>
-          </DialogFooter>
+          <div className="flex justify-center mt-4">
+            <Button onClick={() => setShowSuccessModal(false)}>확인</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1223,10 +1156,10 @@ export default function SettingsManagement() {
             <DialogDescription className="text-center text-lg">
               <span className="font-semibold text-gray-700">{savedCategory}</span> 설정 저장에 실패했습니다.
               <br />
-              <div className="text-sm text-red-600 mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+              <span className="text-sm text-red-600 mt-3 p-3 bg-red-50 rounded-lg border border-red-200 inline-block">
                 <span className="font-medium">오류 상세:</span><br />
                 {errorMessage}
-              </div>
+              </span>
               <span className="text-sm text-gray-500 mt-2 block">잠시 후 다시 시도해주세요.</span>
             </DialogDescription>
           </DialogHeader>

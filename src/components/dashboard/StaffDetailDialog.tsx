@@ -489,9 +489,10 @@ const StaffDetailDialog = ({ open, onOpenChange, staffId, staffName }: StaffDeta
                         <TableCell>
                           <div>
                             <div className="font-medium">{project.name}</div>
-                            <div className="text-sm text-gray-500 line-clamp-1">
-                              {project.description}
-                            </div>
+                            <div 
+                              className="text-sm text-gray-500 line-clamp-1 prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: project.description || '' }}
+                            />
                           </div>
                         </TableCell>
                         <TableCell>{project.clientName}</TableCell>
@@ -549,17 +550,12 @@ const StaffDetailDialog = ({ open, onOpenChange, staffId, staffName }: StaffDeta
                       return (
                         <TableRow key={task.id}>
                           <TableCell>
-                            <div>
-                              <div className="font-medium flex items-center gap-2">
-                                <span 
-                                  className="inline-block w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: phaseInfo.color }}
-                                />
-                                {task.taskPhaseName || phaseInfo.name}
-                              </div>
-                              <div className="text-sm text-gray-500 line-clamp-1">
-                                {task.title}
-                              </div>
+                            <div className="font-medium flex items-center gap-2">
+                              <span 
+                                className="inline-block w-3 h-3 rounded-full"
+                                style={{ backgroundColor: phaseInfo.color }}
+                              />
+                              {phaseInfo.name}
                             </div>
                           </TableCell>
                           <TableCell>

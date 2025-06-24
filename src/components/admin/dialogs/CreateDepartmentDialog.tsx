@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,21 +35,30 @@ export default function CreateDepartmentDialog({
     e.preventDefault();
     
     try {
+      console.log('🏢 부서 생성 다이얼로그에서 제출:', formData);
+      
       await createDepartment(formData);
+      
+      console.log('✅ 부서 생성 완료');
+      
       toast({
         title: "부서 생성 완료",
-        description: "새 부서가 성공적으로 등록되었습니다.",
+        description: `"${formData.name}" 부서가 성공적으로 등록되었습니다.`,
       });
+      
       onOpenChange(false);
       setFormData({
         name: "",
         code: "",
         description: "",
       });
+      
     } catch (error) {
+      console.error('❌ 부서 생성 실패:', error);
+      
       toast({
         title: "오류 발생",
-        description: "부서 생성 중 문제가 발생했습니다.",
+        description: "부서 생성 중 문제가 발생했습니다. 다시 시도해주세요.",
         variant: "destructive",
       });
     }

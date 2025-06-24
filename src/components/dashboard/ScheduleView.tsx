@@ -278,7 +278,10 @@ const ScheduleView = () => {
             <div className="space-y-4">
               <div>
                 <div className="text-sm text-gray-500">설명</div>
-                <div className="mt-1">{selectedTask.description}</div>
+                <div 
+                  className="mt-1 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: selectedTask.description || '설명이 없습니다.' }}
+                />
               </div>
               
               <div className="flex justify-between">

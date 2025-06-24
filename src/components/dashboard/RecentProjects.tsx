@@ -644,12 +644,6 @@ const RecentProjects = ({ projects, tasks, users }: RecentProjectsProps) => {
                         <p className="flex items-center gap-2">
                           <Building2 className="w-4 h-4" />
                           {(() => {
-                            console.log("부서 표시 디버깅:", {
-                              selectedProject_department: selectedProject.department,
-                              departments: departments,
-                              foundDepartment: departments.find(d => d.id === selectedProject.department)
-                            });
-                            
                             // 부서 찾기
                             const foundDept = departments.find(d => d.id === selectedProject.department);
                             if (foundDept) {
@@ -903,9 +897,10 @@ const RecentProjects = ({ projects, tasks, users }: RecentProjectsProps) => {
                     />
                   ) : (
                     <div className="p-4 bg-gray-50 rounded-lg border">
-                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                        {selectedProject.description || "설명이 없습니다."}
-                      </p>
+                      <div 
+                        className="text-gray-700 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: selectedProject.description || "설명이 없습니다." }}
+                      />
                     </div>
                   )}
                 </div>

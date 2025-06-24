@@ -274,9 +274,10 @@ const TaskDetailsDialog = ({
                         variant="outline" 
                         className="text-sm font-medium"
                         style={{ 
-                          backgroundColor: `${getTaskPhaseInfo(currentTask.taskPhase).color}20`,
+                          backgroundColor: `${getTaskPhaseInfo(currentTask.taskPhase).color}40`,
                           borderColor: getTaskPhaseInfo(currentTask.taskPhase).color,
-                          color: getTaskPhaseInfo(currentTask.taskPhase).color
+                          color: getTaskPhaseInfo(currentTask.taskPhase).color,
+                          fontWeight: 600
                         }}
                       >
                         📋 {getTaskPhaseInfo(currentTask.taskPhase).name}
@@ -412,7 +413,10 @@ const TaskDetailsDialog = ({
             {/* Description */}
             <div>
               <div className="text-sm text-gray-500 mb-2">{t.taskDescription || '업무 설명'}</div>
-              <p className="text-sm">{currentTask.description}</p>
+              <div 
+                className="text-sm prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: currentTask.description || '설명이 없습니다.' }}
+              />
               
               {/* 상태 변경 버튼들 - 등록자만 표시 */}
               {true && (

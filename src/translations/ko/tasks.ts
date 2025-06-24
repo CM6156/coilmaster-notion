@@ -22,7 +22,7 @@ export const tasksTranslations: TasksTranslations = {
   noTasks: "업무가 없습니다.",
   createFirst: "새 업무를 생성하세요.",
   taskJournal: "업무 일지",
-  taskJournalList: "업무 일지 목록",
+  taskJournalList: "프로젝트 업무 일지 목록",
   viewDetails: "상세 정보 보기",
   totalJournals: "전체 일지",
   urgent: "긴급",
@@ -37,7 +37,25 @@ export const tasksTranslations: TasksTranslations = {
   // Korean status labels for compatibility
   진행중: "진행중",
   완료: "완료",
-  지연: "지연"
+  지연: "지연",
+  
+  // Tasks Database page related
+  taskDatabase: "업무 데이터베이스",
+  taskDatabaseSubtitle: "모든 프로젝트의 업무 데이터를 조회할 수 있습니다",
+  readOnlyMode: "읽기 전용 모드",
+  searchTasks: "업무 검색...",
+  stage: "Stage",
+  taskName: "Task Name",
+  assignee: "담당",
+  stageUnassigned: "단계 미지정",
+  unassigned: "미지정",
+  daysDelayed: "일 지연",
+  normal: "정상",
+  dataLink: "자료 Link",
+  noSearchResults: "검색 결과가 없습니다",
+  tryDifferentSearch: "다른 검색어나 필터를 시도해보세요.",
+  databaseInfo: "데이터베이스 정보",
+  databaseDescription: "이 페이지는 각 프로젝트 상세정보에서 등록된 하위업무들을 모아서 보여주는 읽기 전용 데이터베이스입니다. 업무 수정은 해당 프로젝트의 상세정보 페이지에서 가능합니다."
 };
 
 export const taskDetailsTranslations: TaskDetailsTranslations = {

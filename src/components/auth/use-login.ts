@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -58,9 +57,9 @@ export const useLogin = (language: LanguageCode) => {
                        language === "zh" ? "欢迎来到 Coilmaster Notion！" : "ยินดีต้อนรับสู่ Coilmaster Notion!",
         });
 
-        // Use replace to prevent history stacking and redirect to dashboard
-        console.log("Redirecting to dashboard after successful login");
-        navigate('/dashboard', { replace: true });
+        // Use replace to prevent history stacking and redirect to projects
+        console.log("Redirecting to projects after successful login");
+        navigate('/projects', { replace: true });
         
         return true;
       }

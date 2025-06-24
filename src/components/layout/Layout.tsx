@@ -29,13 +29,15 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen mobile-optimized">
       <Sidebar />
       <MobileSidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-slate-100">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto bg-slate-100 p-2 sm:p-4 md:p-6">
+          <div className="container mx-auto max-w-full">
+            <Outlet />
+          </div>
         </main>
       </div>
       

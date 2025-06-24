@@ -123,9 +123,10 @@ const TaskCard = ({ task }: TaskCardProps) => {
                   variant="outline" 
                   className="text-sm font-medium"
                   style={{ 
-                    backgroundColor: `${getTaskPhaseInfo().color}20`,
+                    backgroundColor: `${getTaskPhaseInfo().color}40`,
                     borderColor: getTaskPhaseInfo().color,
-                    color: getTaskPhaseInfo().color
+                    color: getTaskPhaseInfo().color,
+                    fontWeight: 600
                   }}
                 >
                   📋 {getTaskPhaseInfo().name}
@@ -138,7 +139,10 @@ const TaskCard = ({ task }: TaskCardProps) => {
                 </div>
               </div>
               
-              <p className="text-gray-600 mt-1 line-clamp-2">{task.description}</p>
+              <div 
+                className="text-gray-600 mt-1 line-clamp-2 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: task.description || '' }}
+              />
               
               <div className="flex flex-wrap items-center mt-3 gap-x-4 gap-y-2 text-sm text-gray-500">
                 <div className={cn("px-2 py-1 rounded-full", 

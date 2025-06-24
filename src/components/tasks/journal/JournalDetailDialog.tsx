@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -226,9 +227,10 @@ export const JournalDetailDialog: React.FC<JournalDetailDialogProps> = ({
                     일지 내용
                   </h3>
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg">
-                    <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {journal.content}
-                    </p>
+                    <div 
+                      className="text-slate-700 dark:text-slate-300 leading-relaxed prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: journal.content }}
+                    />
                   </div>
                 </CardContent>
               </Card>

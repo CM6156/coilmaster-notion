@@ -319,12 +319,29 @@ const TaskCreateDialog = ({ open, onOpenChange }: TaskCreateDialogProps) => {
     try {
       console.log('🔍 담당자 추가 요청:', { taskId, assigneeIds, primaryId });
       
-      // 먼저 user_profiles에 존재하는 사용자만 필터링
-      const { data: validUsers, error: userCheckError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .in('id', assigneeIds);
+      // 먼저 user_profiles에 존재하는 사용자만 필터링 (안전한 처리)
+      let validUsers = null;
+      let userCheckError = null;
+      
+      try {
+        const result = await supabase
+          .from('user_profiles')
+          .select('id')
+          .in('id', assigneeIds);
         
+        validUsers = result.data;
+        userCheckError = result.error;
+      } catch (profileError) {
+        console.log('user_profiles 뷰를 사용할 수 없습니다, users 테이블 사용:', profileError);
+        const result = await supabase
+          .from('users')
+          .select('id')
+          .in('id', assigneeIds);
+        
+        validUsers = result.data;
+        userCheckError = result.error;
+      }
+      
       if (userCheckError) {
         console.error('사용자 존재 확인 오류:', userCheckError);
         throw userCheckError;

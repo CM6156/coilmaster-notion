@@ -67,7 +67,7 @@ type JournalFormData = {
 };
 
 const TaskJournalList = () => {
-  const { users, projects, tasks, currentUser, workJournals, createWorkJournal } = useAppContext();
+  const { users, projects, tasks, currentUser, workJournals, createWorkJournal, deleteWorkJournal } = useAppContext();
   const { translations } = useLanguage();
   const t = translations.tasks;
   
@@ -88,6 +88,8 @@ const TaskJournalList = () => {
     }
   };
 
+
+
   // 상세보기 핸들러
   const handleViewDetail = (journal: any) => {
     setSelectedJournal(journal);
@@ -98,6 +100,26 @@ const TaskJournalList = () => {
   const handleEdit = (journal: any) => {
     setSelectedJournal(journal);
     setIsEditDialogOpen(true);
+  };
+
+  // 삭제 핸들러
+  const handleDelete = async (journal: any) => {
+    if (!confirm('정말로 이 업무일지를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      await deleteWorkJournal(journal.id);
+      
+      // 성공 메시지 (toast 사용 가능하다면)
+      console.log('업무일지가 삭제되었습니다.');
+      
+      // 목록 새로고침
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('업무일지 삭제 실패:', error);
+      alert('업무일지 삭제에 실패했습니다.');
+    }
   };
 
   // 업무 일지 업데이트 콜백
@@ -176,7 +198,7 @@ const TaskJournalList = () => {
   const stats = [
     {
       title: "전체 일지",
-      count: workJournals.length,
+      count: filteredJournals.length,
       icon: BookOpen,
       color: "bg-gradient-to-br from-blue-500 to-purple-500",
       iconColor: "text-blue-600",
@@ -184,7 +206,7 @@ const TaskJournalList = () => {
     },
     {
       title: "진행중",
-      count: workJournals.filter(j => j.status === "in-progress").length,
+      count: filteredJournals.filter(j => j.status === "in-progress").length,
       icon: Loader2,
       color: "bg-gradient-to-br from-yellow-500 to-orange-500",
       iconColor: "text-yellow-600",
@@ -192,7 +214,7 @@ const TaskJournalList = () => {
     },
     {
       title: "완료",
-      count: workJournals.filter(j => j.status === "completed").length,
+      count: filteredJournals.filter(j => j.status === "completed").length,
       icon: CheckCircle2,
       color: "bg-gradient-to-br from-green-500 to-emerald-500",
       iconColor: "text-green-600",
@@ -200,7 +222,7 @@ const TaskJournalList = () => {
     },
     {
       title: "지연",
-      count: workJournals.filter(j => j.status === "delayed").length,
+      count: filteredJournals.filter(j => j.status === "delayed").length,
       icon: AlertCircle,
       color: "bg-gradient-to-br from-red-500 to-pink-500",
       iconColor: "text-red-600",
@@ -219,7 +241,7 @@ const TaskJournalList = () => {
                 <div className="p-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500">
                   <BookOpen className="h-6 w-6 text-white" />
                 </div>
-                {t?.taskJournalList || "업무 일지 목록"}
+                {t?.taskJournalList || "프로젝트 업무 일지 목록"}
               </h1>
               <p className="text-muted-foreground">
                 {t?.taskJournalDescription || "등록된 업무에 대한 일지를 작성하고 관리하세요"}
@@ -335,7 +357,10 @@ const TaskJournalList = () => {
                             <Edit className="h-4 w-4 mr-2" />
                             수정
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => handleDelete(journal)}
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             삭제
                           </DropdownMenuItem>
@@ -348,9 +373,53 @@ const TaskJournalList = () => {
                     <div className="space-y-4">
                       {/* 내용 */}
                       <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg">
-                        <p className="text-sm whitespace-pre-wrap line-clamp-3 text-slate-700 dark:text-slate-300">
-                          {journal.content}
-                        </p>
+                        {(() => {
+                          try {
+                            // JSON 배열 형태인지 확인하고 파싱
+                            const parsedContent = JSON.parse(journal.content || '[]');
+                            if (Array.isArray(parsedContent) && parsedContent.length > 0) {
+                              return (
+                                <div className="space-y-3">
+                                  {parsedContent.slice(0, 2).map((task, index) => (
+                                    <div key={index} className="border-l-4 border-blue-500 pl-3">
+                                      {task.title && (
+                                        <h4 className="font-medium text-sm text-slate-800 dark:text-slate-200 mb-1">
+                                          {task.title}
+                                        </h4>
+                                      )}
+                                      {task.content && (
+                                        <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                                          <div dangerouslySetInnerHTML={{ __html: task.content }} />
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {parsedContent.length > 2 && (
+                                    <p className="text-xs text-muted-foreground">
+                                      ... 외 {parsedContent.length - 2}개 업무
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            } else {
+                              // 기존 단일 텍스트 형태 (HTML 렌더링 적용)
+                              return (
+                                <div 
+                                  className="text-sm whitespace-pre-wrap line-clamp-3 text-slate-700 dark:text-slate-300 prose prose-sm max-w-none"
+                                  dangerouslySetInnerHTML={{ __html: journal.content || '' }}
+                                />
+                              );
+                            }
+                          } catch {
+                            // JSON 파싱 실패 시 기존 텍스트로 표시 (HTML 렌더링 적용)
+                            return (
+                              <div 
+                                className="text-sm whitespace-pre-wrap line-clamp-3 text-slate-700 dark:text-slate-300 prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: journal.content || '' }}
+                              />
+                            );
+                          }
+                        })()}
                       </div>
                       
                       {/* 메타 정보 */}

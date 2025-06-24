@@ -15,7 +15,7 @@ export const sidebarTranslations: SidebarTranslations = {
   logout: "로그아웃",
   taskManagement: "업무 관리",
   taskJournal: "업무 일지",
-  taskJournalList: "업무 일지 목록",
+  taskJournalList: "프로젝트 업무 일지 목록",
   chat: "채팅",
   chatRooms: "채팅방",
   directMessages: "개인 메시지",
@@ -30,5 +30,12 @@ export const sidebarTranslations: SidebarTranslations = {
   online: "온라인",
   systemStatus: "시스템 정상",
   serverStatus: "서버 상태: 양호",
-  currentPage: "현재"
+  currentPage: "현재",
+  managers: "담당자",
+  managersJournal: "담당자 일지",
+  allJournals: "모든 업무 일지",
+  onlineUsers: "온라인 사용자",
+  workJournal: "업무일지",
+  myWorkJournal: "내 업무일지",
+  allWorkJournal: "전체 업무일지"
 };

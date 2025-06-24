@@ -188,6 +188,43 @@ export default function ForgotPassword() {
     return t.sendLink;
   };
 
+  const getResendButtonText = () => {
+    if (cooldownTime > 0) return `${t.resendIn}${cooldownTime}s)`;
+    
+    switch (language) {
+      case "ko": return "다시 보내기";
+      case "en": return "Send Again";
+      case "zh": return "重新发送";
+      default: return "ส่งอีกครั้ง";
+    }
+  };
+
+  const getNextStepsText = () => {
+    switch (language) {
+      case "ko": return "다음 단계:";
+      case "en": return "Next steps:";
+      case "zh": return "下一步：";
+      default: return "ขั้นตอนต่อไป:";
+    }
+  };
+
+  const getStepTexts = () => {
+    return {
+      step1: language === "ko" ? "이메일 받은편지함을 확인하세요" : 
+             language === "en" ? "Check your email inbox" :
+             language === "zh" ? "检查您的邮箱收件箱" :
+             "ตรวจสอบกล่องจดหมายของคุณ",
+      step2: language === "ko" ? "스팸 폴더도 확인해보세요" : 
+             language === "en" ? "Also check your spam folder" :
+             language === "zh" ? "同时检查垃圾邮件文件夹" :
+             "ตรวจสอบโฟลเดอร์สแปมด้วย",
+      step3: language === "ko" ? "이메일의 '비밀번호 재설정' 링크를 클릭하세요" : 
+             language === "en" ? "Click the 'Reset Password' link in the email" :
+             language === "zh" ? "点击邮件中的'重置密码'链接" :
+             "คลิกลิงก์ 'รีเซ็ตรหัสผ่าน' ในอีเมล"
+    };
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
       <div className="absolute top-4 right-4">
@@ -251,8 +288,23 @@ export default function ForgotPassword() {
                 </form>
               </Form>
             ) : (
-              <div className="py-4 text-center text-sm text-slate-600 space-y-6">
-                <p>{t.successMessage}</p>
+              <div className="py-4 text-center space-y-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm text-green-800 font-medium">{t.successMessage}</p>
+                  <p className="text-xs text-green-700 mt-2">{t.successDescription}</p>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 font-medium mb-2">
+                    {getNextStepsText()}
+                  </p>
+                  <ol className="text-xs text-blue-700 text-left space-y-1">
+                    <li>1. {getStepTexts().step1}</li>
+                    <li>2. {getStepTexts().step2}</li>
+                    <li>3. {getStepTexts().step3}</li>
+                  </ol>
+                </div>
+                
                 <Button 
                   variant="outline" 
                   className="w-full border border-gray-300"
@@ -262,7 +314,7 @@ export default function ForgotPassword() {
                   }}
                   disabled={cooldownTime > 0}
                 >
-                  {cooldownTime > 0 ? `${t.resendIn}${cooldownTime}s)` : t.sendLink}
+                  {getResendButtonText()}
                 </Button>
               </div>
             )}

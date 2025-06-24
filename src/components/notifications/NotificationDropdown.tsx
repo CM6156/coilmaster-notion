@@ -32,8 +32,11 @@ export const NotificationDropdown = () => {
   const { userProfile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  // 안전한 notifications 처리
+  const safeNotifications = notifications || [];
+
   // 읽지 않은 알림 개수
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = safeNotifications.filter(n => !n.read).length;
 
   // 알림 타입별 아이콘
   const getNotificationIcon = (type: string) => {
@@ -131,7 +134,7 @@ export const NotificationDropdown = () => {
         
         <DropdownMenuSeparator />
         
-        {notifications.length === 0 ? (
+        {safeNotifications.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground">
             <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">알림이 없습니다</p>
@@ -139,7 +142,7 @@ export const NotificationDropdown = () => {
         ) : (
           <ScrollArea className="h-80">
             <div className="space-y-1">
-              {notifications
+              {safeNotifications
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .map((notification) => {
                   const Icon = getNotificationIcon(notification.type);

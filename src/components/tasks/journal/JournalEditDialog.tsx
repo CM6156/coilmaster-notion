@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 import { toast } from "sonner";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface WorkJournal {
   id: string;
@@ -230,16 +231,14 @@ export const JournalEditDialog: React.FC<JournalEditDialogProps> = ({
               <Label htmlFor="content" className="text-sm font-medium">
                 일지 내용 <span className="text-red-500">*</span>
               </Label>
-              <Textarea
-                id="content"
-                placeholder="오늘 수행한 업무 내용을 상세히 작성해주세요..."
+              <RichTextEditor
                 value={formData.content}
-                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                className="min-h-[200px] resize-none"
-                required
+                onChange={(content) => setFormData(prev => ({ ...prev, content }))}
+                placeholder="오늘 수행한 업무 내용을 상세히 작성해주세요..."
+                height={300}
               />
               <p className="text-xs text-muted-foreground">
-                {formData.content.length}/1000자
+                {formData.content.replace(/<[^>]*>/g, '').length} 문자 (HTML 태그 제외)
               </p>
             </div>
           </form>

@@ -441,7 +441,10 @@ export const TaskDetailDialog = ({ task, open, onOpenChange, onTaskUpdated }: Ta
                 <TaskStatusBadge status={task.status} />
               </div>
               {task.description && (
-                <p className="text-muted-foreground">{task.description}</p>
+                <div 
+                  className="text-muted-foreground prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: task.description }}
+                />
               )}
             </div>
 

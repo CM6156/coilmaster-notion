@@ -39,6 +39,8 @@ export const projectsTranslations: ProjectsTranslations = {
   statusActive: "진행중",
   statusDelayed: "지연",
   statusOnHold: "보류",
+  statusNotStarted: "시작전",
+  statusInProgress: "진행중",
   
   // Phase translations
   phasePlanning: "기획",
@@ -47,6 +49,50 @@ export const projectsTranslations: ProjectsTranslations = {
   phaseQuality: "품질",
   phaseProduction: "양산",
   phaseSales: "영업",
+  
+  // Promotion stage translations
+  promotionStagePromotion: "Promotion",
+  promotionStageSample: "Sample 및 견적",
+  promotionStage1stVerification: "1차 특성 검증",
+  promotionStageDesignVerification: "설계 검증",
+  promotionStageSetVerification: "Set 검증",
+  promotionStageApproval: "승인",
+  promotionStageOrder: "수주",
+  promotionStageDrop: "Drop",
+  
+  // Project type translations
+  projectType11: "1-1. 경쟁사 샘플 입수",
+  projectType12: "1-2. 경쟁사 샘플 분석",
+  projectType21: "2-1. 원자재 소싱 견적",
+  projectType31: "3-1. 설비 소싱 견적",
+  projectType32: "3-2. 설비 제작 완료",
+  projectType41: "4-1. E-Service 내용 구성",
+  projectType42: "4-2. E-Service 영상 제작",
+  projectType51: "5-1. LINE 그리기",
+  projectType61: "6-1. 원가 산출",
+  projectType71: "7-1. PP",
+  projectType72: "7-2. 품질 문제점 확인",
+  projectType81: "8-1. 최종 개선",
+  projectType91: "9-1. Order getting",
+  
+  // Table headers
+  tableProject: "프로젝트",
+  tablePromotionStage: "프로모션 단계",
+  tableProgress: "진행률",
+  tableStartDate: "시작일",
+  tableDueDate: "마감일",
+  tableRemainingTime: "남은시간",
+  tableManager: "담당자",
+  
+  // Common terms
+  all: "전체",
+  projectsCount: "개의 프로젝트",
+  averageProgress: "평균 진행률",
+  totalRatio: "전체 비율",
+  daysDelayed: "일 지연",
+  dueToday: "오늘 마감",
+  daysRemaining: "일 남음",
+  unassigned: "미지정",
   
   // ProjectDetailsDialog 관련 새 키들
   clientName: "고객사",
@@ -61,7 +107,6 @@ export const projectsTranslations: ProjectsTranslations = {
   relatedTasks: "관련 업무",
   addTask: "업무 추가",
   noRelatedTasks: "관련된 업무가 없습니다.",
-  unassigned: "미할당",
   subtaskProgress: "하위 업무 진행율",
   priority: "우선순위",
   priorityHigh: "높음",
@@ -74,7 +119,28 @@ export const projectsTranslations: ProjectsTranslations = {
   days: "일",
   remaining: "남음",
   overdue: "지남",
-  dueToday: "오늘 마감",
   completionRateLabel: "완료율",
-  recentProjects: "최근 등록된 프로젝트"
+  recentProjects: "최근 등록된 프로젝트",
+  
+  // MyProjects 페이지 관련
+  myProjects: "내 프로젝트",
+  myProjectsSubtitle: "내가 담당하는 프로젝트들의 현황과 진행 상태를 한눈에 확인하세요",
+  totalProjectsCount: "총 {count}개 프로젝트",
+  searchProjectsPlaceholder: "프로젝트 검색...",
+  statusFilter: "상태 필터",
+  assigneeFilter: "담당자 필터",
+  allStatuses: "모든 상태",
+  allAssignees: "모든 담당자",
+  sortByName: "이름",
+  sortByDueDate: "마감일",
+  sortByProgress: "진행률",
+  tabOverdue: "기간 경과",
+  tabInProgress: "진행중",
+  tabCompleted: "완료",
+  tabTimeline: "타임라인",
+  excellentMessage: "훌륭합니다! 🎉",
+  noOverdueProjects: "기간이 경과된 프로젝트가 없습니다.",
+  urgent: "긴급",
+  planning: "계획중",
+  onHold: "보류"
 };

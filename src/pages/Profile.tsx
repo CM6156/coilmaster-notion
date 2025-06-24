@@ -37,10 +37,14 @@ import {
   UserCheck,
   Sparkles,
   Globe,
-  Activity
+  Activity,
+  Bell,
+  MessageSquare
 } from "lucide-react";
+import { formatDateInTimezone, getTimezoneDisplayName, isOptimalNotificationTime } from "@/utils/timezone";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TIMEZONE_OPTIONS } from "@/constants/timezones";
 
 interface UserProfile {
   id: string;
@@ -60,6 +64,7 @@ interface UserProfile {
   avatar?: string;
   avatar_url?: string;
   phone?: string;
+  timezone?: string;
 }
 
 interface Department {
@@ -72,7 +77,7 @@ interface Department {
 export default function Profile() {
   const { toast } = useToast();
   const { translations, language } = useLanguage();
-  const { currentUser, setCurrentUser } = useAppContext();
+  const { currentUser, setCurrentUser, createTimezoneAwareNotification } = useAppContext();
   const t = translations.profile;
   
   // 디버깅을 위한 로그
@@ -96,6 +101,7 @@ export default function Profile() {
     department_id: "",
     phone: "",
     is_active: true,
+    timezone: "Asia/Seoul",
     currentPassword: "",
     newPassword: "",
     confirmPassword: ""
@@ -186,14 +192,25 @@ export default function Profile() {
           }
         }
 
-        // user_profiles 뷰에서 사용자 정보 조회
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+        // user_profiles 뷰에서 사용자 정보 조회 (안전한 처리)
+        let data = null;
+        let error = null;
         
-        if (error) {
+        try {
+          const result = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          
+          data = result.data;
+          error = result.error;
+        } catch (userProfilesError) {
+          console.log('user_profiles 뷰가 존재하지 않거나 접근할 수 없습니다:', userProfilesError);
+          error = userProfilesError;
+        }
+        
+        if (error || !data) {
           console.log('user_profiles 뷰 조회 실패, users 테이블 직접 조회:', error);
           // 뷰 조회 실패 시 users 테이블 직접 조회
           const result = await supabase
@@ -218,6 +235,7 @@ export default function Profile() {
               department_id: (currentUser as any)?.department_id || "",
               phone: (currentUser as any)?.phone || "",
               is_active: (currentUser as any)?.is_active || currentUser.isActive || true,
+              timezone: "Asia/Seoul",
               currentPassword: "",
               newPassword: "",
               confirmPassword: ""
@@ -243,7 +261,8 @@ export default function Profile() {
             last_login: userData.last_login,
             avatar: userData.avatar,
             avatar_url: userData.avatar_url,
-            phone: userData.phone
+            phone: userData.phone,
+            timezone: userData.timezone || "Asia/Seoul"
           };
           
           console.log('✅ users 테이블에서 프로필 로드 완료:', profileData);
@@ -260,6 +279,7 @@ export default function Profile() {
             department_id: profileData.department_id || "",
             phone: profileData.phone || "",
             is_active: profileData.is_active || true,
+            timezone: profileData.timezone || "Asia/Seoul",
             currentPassword: "",
             newPassword: "",
             confirmPassword: ""
@@ -284,6 +304,7 @@ export default function Profile() {
             department_id: data?.department_id || "",
             phone: data?.phone || "",
             is_active: data?.is_active || true,
+            timezone: data?.timezone || "Asia/Seoul",
             currentPassword: "",
             newPassword: "",
             confirmPassword: ""
@@ -306,6 +327,7 @@ export default function Profile() {
             department_id: (currentUser as any)?.department_id || "",
             phone: (currentUser as any)?.phone || "",
             is_active: (currentUser as any)?.is_active || currentUser.isActive || true,
+            timezone: "Asia/Seoul",
             currentPassword: "",
             newPassword: "",
             confirmPassword: ""
@@ -429,6 +451,7 @@ export default function Profile() {
         department_id: formData.department_id || null,
         phone: formData.phone?.trim() || null,
         is_active: formData.is_active, // 활성화 상태 저장
+        timezone: formData.timezone,
         updated_at: new Date().toISOString()
       };
       
@@ -475,6 +498,7 @@ export default function Profile() {
               role: 'user',
               is_active: formData.is_active, // 활성화 상태 포함
               login_method: 'email',
+              timezone: formData.timezone,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             };
@@ -497,6 +521,7 @@ export default function Profile() {
                 ...createResult[0],
                 department_name: departments.find(d => d.id === formData.department_id)?.name,
                 department_code: departments.find(d => d.id === formData.department_id)?.code,
+                timezone: formData.timezone
               };
               
       setProfile(updatedProfile);
@@ -514,6 +539,7 @@ export default function Profile() {
                   phone: updatedProfile.phone,
                   role: createResult[0].role, // 역할 정보 포함
                   is_active: createResult[0].is_active, // 활성화 상태 포함
+                  timezone: updatedProfile.timezone
                 };
                 setCurrentUser(updatedCurrentUser);
                 
@@ -543,6 +569,7 @@ export default function Profile() {
                       ...recheckData,
                       department_name: recheckData.department?.name,
                       department_code: recheckData.department?.code,
+                      timezone: recheckData.timezone
                     };
                     
                     setProfile(finalProfile);
@@ -604,6 +631,7 @@ export default function Profile() {
         ...updateResult[0], // Supabase에서 반환된 실제 데이터 사용
         department_name: selectedDepartment?.name,
         department_code: selectedDepartment?.code,
+        timezone: formData.timezone
       };
       
       console.log("🔄 프로필 상태 업데이트:", updatedProfile);
@@ -622,6 +650,7 @@ export default function Profile() {
           phone: updatedProfile.phone,
           role: updateResult[0].role, // 역할 정보 포함
           is_active: formData.is_active, // 활성화 상태 포함
+          timezone: updatedProfile.timezone
         };
         console.log("🔄 AppContext 업데이트:", updatedCurrentUser);
         setCurrentUser(updatedCurrentUser);
@@ -661,6 +690,7 @@ export default function Profile() {
               phone, 
               is_active,
               role,
+              timezone,
               updated_at,
               department:department_id(id, name, code)
             `)
@@ -679,7 +709,8 @@ export default function Profile() {
               verifyData.email === formData.email.trim() &&
               verifyData.department_id === (formData.department_id || null) &&
               verifyData.phone === (formData.phone?.trim() || null) &&
-              verifyData.is_active === formData.is_active // formData의 활성화 상태와 비교
+              verifyData.is_active === formData.is_active &&
+              verifyData.timezone === formData.timezone
             );
             
             if (isMatch) {
@@ -694,7 +725,8 @@ export default function Profile() {
                   email: formData.email.trim(),
                   department_id: formData.department_id || null,
                   phone: formData.phone?.trim() || null,
-                  is_active: formData.is_active
+                  is_active: formData.is_active,
+                  timezone: formData.timezone
                 },
                 db: verifyData
               });
@@ -847,6 +879,90 @@ export default function Profile() {
   };
 
   // 활성화/비활성화 토글 핸들러 (로컬 상태만 변경)
+  // 시간대 기반 알림 테스트
+  const handleTimezoneNotificationTest = async () => {
+    if (!currentUser?.id) {
+      toast({
+        title: "테스트 실패",
+        description: "로그인된 사용자가 없습니다.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const userTimezone = formData.timezone || 'Asia/Seoul';
+      const currentTime = formatDateInTimezone(new Date(), userTimezone);
+      const isOptimal = isOptimalNotificationTime(userTimezone);
+      
+      await createTimezoneAwareNotification(
+        'test',
+        `시간대 기반 알림 테스트입니다. 현재 설정된 시간대는 ${getTimezoneDisplayName(userTimezone)}입니다.`,
+        currentUser.id,
+        undefined,
+        0
+      );
+
+      toast({
+        title: "✅ 시간대 기반 알림 테스트 성공",
+        description: `현재 시간: ${currentTime} (${isOptimal ? '최적 시간' : '비활성 시간'})`,
+      });
+    } catch (error) {
+      console.error('시간대 기반 알림 테스트 실패:', error);
+      toast({
+        title: "❌ 알림 테스트 실패",
+        description: "시간대 기반 알림 생성에 실패했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // 텔레그램 외부 알림 테스트
+  const handleTelegramNotificationTest = async () => {
+    if (!currentUser?.id) {
+      toast({
+        title: "테스트 실패",
+        description: "로그인된 사용자가 없습니다.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const userTimezone = formData.timezone || 'Asia/Seoul';
+      const currentTime = formatDateInTimezone(new Date(), userTimezone);
+      const isOptimal = isOptimalNotificationTime(userTimezone);
+      
+      // 내부 알림과 외부 텔레그램 알림 동시 테스트
+      await createTimezoneAwareNotification(
+        'telegram_test',
+        `📱 텔레그램 외부 알림 테스트\n🌍 시간대: ${getTimezoneDisplayName(userTimezone)}\n⏰ 현재 시간: ${currentTime}\n📊 최적 시간: ${isOptimal ? '예' : '아니오'}`,
+        currentUser.id,
+        undefined,
+        0
+      );
+
+      // 콘솔에 외부 알림 시뮬레이션 로그
+      console.log('🚀 외부 텔레그램 알림 시뮬레이션');
+      console.log(`📱 메시지: 업무 알림 - ${currentUser.name}님에게 새로운 업무가 할당되었습니다.`);
+      console.log(`🌍 시간대: ${getTimezoneDisplayName(userTimezone)}`);
+      console.log(`⏰ 발송 시간: ${currentTime}`);
+      console.log(`📊 최적 시간 여부: ${isOptimal ? '예 (즉시 전송)' : '아니오 (스케줄 전송)'}`);
+
+      toast({
+        title: "📱 텔레그램 외부 알림 테스트 성공",
+        description: `시간대 기반 외부 알림이 ${isOptimal ? '즉시 전송' : '스케줄'}되었습니다. 콘솔을 확인하세요.`,
+      });
+    } catch (error) {
+      console.error('텔레그램 외부 알림 테스트 실패:', error);
+      toast({
+        title: "❌ 텔레그램 알림 테스트 실패",
+        description: "외부 알림 테스트에 실패했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleActiveToggle = (checked: boolean) => {
     console.log("=== 활성화 상태 로컬 변경 ===");
     console.log("현재 상태:", formData.is_active);
@@ -941,7 +1057,7 @@ export default function Profile() {
                     <div className="text-center p-4 rounded-lg bg-slate-50 dark:bg-slate-800">
                       <Award className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
                       <p className="text-sm text-muted-foreground">멤버십</p>
-                      <p className="font-bold">SVIP</p>
+                      <p className="font-bold">Premium Membership</p>
                     </div>
                   </div>
                 </div>
@@ -1100,6 +1216,117 @@ export default function Profile() {
                             />
                             <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-500" />
                           </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="timezone" className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      시간대
+                    </Label>
+                    <Select
+                      value={formData.timezone}
+                      onValueChange={(val) => setFormData({ ...formData, timezone: val })}
+                    >
+                      <SelectTrigger className="border-0 bg-slate-50 dark:bg-slate-800">
+                        <SelectValue placeholder="시간대를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIMEZONE_OPTIONS.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 시간대 정보 및 알림 테스트 섹션 */}
+                  <div className="pt-6 mt-6 border-t">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-blue-500" />
+                      시간대 정보 및 알림 테스트
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {/* 현재 시간대 정보 */}
+                      <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                                <Globe className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <div className="text-sm text-muted-foreground">현재 설정된 시간대</div>
+                                <div className="font-medium">
+                                  {getTimezoneDisplayName(formData.timezone)}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  현재 시간: {formatDateInTimezone(new Date(), formData.timezone)}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge 
+                                variant={isOptimalNotificationTime(formData.timezone) ? "default" : "secondary"}
+                                className={cn(
+                                  "text-xs",
+                                  isOptimalNotificationTime(formData.timezone) 
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" 
+                                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
+                                )}
+                              >
+                                {isOptimalNotificationTime(formData.timezone) ? '🟢 최적 알림 시간' : '🟡 비활성 시간'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* 시간대 기반 알림 테스트 */}
+                      <Card className="border-0 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50">
+                                <Bell className="h-5 w-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <div className="text-sm text-muted-foreground">시간대 기반 알림 시스템</div>
+                                <div className="font-medium">
+                                  알림 시간 자동 최적화
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  오전 8시 ~ 오후 10시 최적화
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleTimezoneNotificationTest}
+                                className="bg-purple-100 hover:bg-purple-200 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 dark:border-purple-800 dark:text-purple-300"
+                              >
+                                <Bell className="h-4 w-4 mr-2" />
+                                내부 알림
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleTelegramNotificationTest}
+                                className="bg-blue-100 hover:bg-blue-200 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:border-blue-800 dark:text-blue-300"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                외부 알림
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
                   

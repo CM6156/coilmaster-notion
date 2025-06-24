@@ -44,7 +44,8 @@ import {
   UserCheck,
   Clock,
   Wifi,
-  WifiOff
+  WifiOff,
+  RefreshCw
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -80,12 +81,23 @@ interface NotificationItem {
 }
 
 const Sidebar = () => {
-  const { currentUser, tasks, projects, notifications, departments, workJournals } = useAppContext();
+  const { 
+    currentUser, 
+    projects, 
+    tasks, 
+    clients, 
+    notifications,
+    departments,
+    workJournals,
+    refreshAllData,
+    refreshCurrentUserRole 
+  } = useAppContext();
   const { translations, language } = useLanguage();
   const { currentUsers, getUsersOnPage } = useUserActivity();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [isRefreshingRole, setIsRefreshingRole] = useState(false);
   const [sidebarNotifications] = useState<NotificationItem[]>([
     { id: '1', type: 'task', title: '새 업무 할당', message: '프로젝트 A 업무가 할당되었습니다', time: '2분 전', read: false, priority: 'high' },
     { id: '2', type: 'project', title: '프로젝트 업데이트', message: '프로젝트 B가 완료되었습니다', time: '1시간 전', read: false, priority: 'medium' },
@@ -97,6 +109,17 @@ const Sidebar = () => {
     "/team": true
   });
   const location = useLocation();
+
+  // 번역 헬퍼 함수
+  const getText = (ko: string, en: string, zh: string, th: string) => {
+    switch (language) {
+      case "en": return en;
+      case "zh": return zh;
+      case "th": return th;
+      case "ko":
+      default: return ko;
+    }
+  };
 
   // 실제 데이터 기반 계산
   const tasksList = Array.isArray(tasks) ? tasks : [];
@@ -127,6 +150,22 @@ const Sidebar = () => {
 
   // 새로운 기능이나 업데이트가 있는지 확인 (실제로는 서버에서 가져와야 함)
   const hasNewFeatures = false; // 실제 구현 시 서버에서 확인
+
+  // 역할 새로고침 함수
+  const handleRefreshRole = async () => {
+    if (isRefreshingRole) return;
+    
+    setIsRefreshingRole(true);
+    try {
+      console.log('🔄 사이드바에서 역할 새로고침 시작');
+      await refreshCurrentUserRole();
+      console.log('✅ 사이드바 역할 새로고침 완료');
+    } catch (error) {
+      console.error('❌ 사이드바 역할 새로고침 실패:', error);
+    } finally {
+      setIsRefreshingRole(false);
+    }
+  };
 
   // 시스템 변경사항 상태 추가
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
@@ -177,19 +216,32 @@ const Sidebar = () => {
 
   // 실시간 온라인 사용자 데이터 가져오기
   useEffect(() => {
+    let fetchAttempts = 0;
+    const maxFetchAttempts = 2;
+    
     const fetchOnlineUsers = async () => {
+      // 최대 시도 횟수 초과 시 중단
+      if (fetchAttempts >= maxFetchAttempts) {
+        console.log('🚫 온라인 사용자 조회 최대 시도 횟수 초과');
+        setOnlineUsers([]);
+        return;
+      }
+      
       try {
-        console.log('👥 온라인 사용자 조회 시작');
+        console.log(`👥 온라인 사용자 조회 시작 (${fetchAttempts + 1}/${maxFetchAttempts})`);
+        fetchAttempts += 1;
         
-        // 모든 사용자를 조회 (활성화된 사용자만)
+        // 기본 컬럼만 안전하게 선택 (500 오류 방지)
         const { data: users, error } = await supabase
           .from('users')
-          .select('id, name, email, avatar, role, last_seen, updated_at, current_page, is_online')
-          .eq('is_active', true)
+          .select('id, name, email, role, created_at, updated_at')
+          .limit(50) // 최대 50명까지만 조회
           .order('updated_at', { ascending: false });
 
         if (error) {
           console.error('온라인 사용자 조회 오류:', error);
+          // 오류 시 빈 배열로 설정하고 더 이상 시도하지 않음
+          setOnlineUsers([]);
           return;
         }
         
@@ -200,16 +252,17 @@ const Sidebar = () => {
         
         const onlineUserList = (users || [])
           .map(user => {
-            const lastActivity = new Date(user.updated_at || user.last_seen || 0);
+            const lastActivity = new Date(user.updated_at || user.created_at || 0);
             const isRecentlyActive = lastActivity > tenMinutesAgo;
-            const isOnline = user.is_online && isRecentlyActive;
+            // 기본적으로 최근 활동한 사용자를 온라인으로 간주 (컬럼이 없는 경우 대비)
+            const isOnline = isRecentlyActive;
             
             return {
               id: user.id,
               name: user.name || user.email || 'Unknown',
-              avatar: user.avatar,
+              avatar: undefined, // 아바타 컬럼이 확실하지 않으므로 undefined로 설정
               status: isOnline ? 'online' : 'offline',
-              currentPage: user.current_page || (isOnline ? '활동 중' : '오프라인'),
+              currentPage: '활동 중', // 기본값 사용
               lastSeen: lastActivity.toLocaleString('ko-KR'),
               role: user.role
             } as OnlineUser;
@@ -269,21 +322,23 @@ const Sidebar = () => {
           const currentPageName = getCurrentPageName();
           console.log('👤 사용자 활동 상태 업데이트:', userName, '현재 페이지:', currentPageName);
           
-          // 사용자 온라인 상태 업데이트
+          // 사용자 온라인 상태 업데이트 (기본 컬럼만 안전하게)
           const { error } = await supabase
             .from('users')
             .update({
-              updated_at: new Date().toISOString(),
-              last_seen: new Date().toISOString(),
-              current_page: currentPageName,
-              is_online: true
+              updated_at: new Date().toISOString()
             })
             .eq('id', userId);
 
           if (error) {
-            console.error('사용자 활동 상태 업데이트 오류:', error);
+            // 컬럼이 존재하지 않는 경우나 기타 오류 처리
+            if (error.code === '42703' || error.code === 'PGRST204') {
+              console.log('페이지 변경 업데이트 - 일부 컬럼이 존재하지 않습니다:', error.message);
+            } else {
+              console.error('페이지 변경 업데이트 오류:', error);
+            }
           } else {
-            console.log('✅ 사용자 활동 상태 업데이트 성공 - 페이지:', currentPageName);
+            console.log('✅ 페이지 변경 업데이트 성공');
             lastUpdateTime = now;
           }
         }
@@ -354,21 +409,23 @@ const Sidebar = () => {
           const currentPageName = getCurrentPageName();
           console.log('🔄 페이지 변경 감지 - 즉시 업데이트:', currentPageName);
           
-          // 현재 페이지만 즉시 업데이트
+          // 현재 페이지만 즉시 업데이트 (기본 컬럼만 안전하게)
           const { error } = await supabase
             .from('users')
             .update({
-              current_page: currentPageName,
-              updated_at: new Date().toISOString(),
-              last_seen: new Date().toISOString(),
-              is_online: true
+              updated_at: new Date().toISOString()
             })
             .eq('id', userId);
 
           if (error) {
-            console.error('페이지 변경 업데이트 오류:', error);
+            // 컬럼이 존재하지 않는 경우나 기타 오류 처리
+            if (error.code === '42703' || error.code === 'PGRST204') {
+              console.log('페이지 업데이트 - 일부 컬럼이 존재하지 않습니다:', error.message);
+            } else {
+              console.error('페이지 변경 업데이트 오류:', error);
+            }
           } else {
-            console.log('✅ 페이지 변경 업데이트 성공:', currentPageName);
+            console.log('✅ 페이지 변경 업데이트 성공');
           }
         }
       } catch (error) {
@@ -397,48 +454,88 @@ const Sidebar = () => {
     }
   }, [currentUser]);
 
-  // 사용자 역할 정보 동기화 (최적화됨)
+  // 사용자 역할 정보 동기화 (500 오류 방지 강화)
   useEffect(() => {
     let syncInProgress = false;
-    let lastSyncTime = 0;
-    const SYNC_INTERVAL = 10 * 60 * 1000; // 10분마다만 동기화
+    let syncAttempts = 0;
+    const maxSyncAttempts = 3;
     
     const syncUserRole = async () => {
-      const now = Date.now();
-      
-      // 조건 체크: 사용자 ID 없음, 이미 진행 중, 최근에 동기화함
-      if (!currentUser?.id || syncInProgress || (now - lastSyncTime) < SYNC_INTERVAL) {
-        console.log('사용자 역할 동기화 건너뜀:', {
-          hasUserId: !!currentUser?.id,
-          inProgress: syncInProgress,
-          timeSinceLastSync: now - lastSyncTime,
-          interval: SYNC_INTERVAL
-        });
+      // 조건 체크: 사용자 ID 없음, 이미 진행 중, 시도 횟수 초과
+      if (!currentUser?.id || syncInProgress || syncAttempts >= maxSyncAttempts) {
+        if (syncAttempts >= maxSyncAttempts) {
+          console.log('🚫 사용자 역할 동기화 최대 시도 횟수 초과, 현재 정보 유지');
+          setUserProfile(currentUser);
+        }
         return;
       }
       
       syncInProgress = true;
+      syncAttempts += 1;
       
       try {
-        console.log('🔄 사이드바 - 사용자 역할 정보 동기화 비활성화됨 (리소스 절약)');
+        console.log(`🔄 사이드바 - 사용자 역할 정보 동기화 시작 (${syncAttempts}/${maxSyncAttempts})`);
+        console.log('현재 사용자 ID:', currentUser.id);
         
-        // 실제 DB 동기화는 비활성화하고 로컬 데이터만 사용
-        lastSyncTime = now;
+        // UUID 형식 검증
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(currentUser.id)) {
+          console.log('❌ 유효하지 않은 UUID 형식:', currentUser.id);
+          setUserProfile(currentUser);
+          return;
+        }
+        
+        // 기본 필드만 안전하게 조회 (500 오류 방지)
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, name, email, role, created_at, updated_at')
+          .eq('id', currentUser.id)
+          .single();
+
+        console.log('Supabase 조회 결과:', { userData, userError });
+
+        if (userData && !userError) {
+          console.log('✅ 최신 사용자 정보 조회 성공:', userData);
+          console.log('DB에서 가져온 역할:', userData.role);
+          
+          // userProfile 업데이트 (기존 정보와 병합)
+          const updatedProfile = { ...currentUser, ...userData };
+          setUserProfile(updatedProfile);
+          
+          // localStorage도 업데이트
+          localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+          
+          console.log('✅ 사이드바 사용자 프로필 업데이트 완료');
+          syncAttempts = 0; // 성공 시 시도 횟수 리셋
+        } else {
+          console.log('❌ 사용자 정보 조회 실패:', userError);
+          
+          // 모든 종류의 오류에 대해 현재 사용자 정보 유지
+          console.log('🔄 오류로 인해 현재 사용자 정보를 그대로 사용');
+          setUserProfile(currentUser);
+          localStorage.setItem("userProfile", JSON.stringify(currentUser));
+        }
         
       } catch (error: any) {
-        console.log('사이드바 - 역할 동기화 중 오류:', error);
+        console.log(`사이드바 - 역할 동기화 중 오류 (${syncAttempts}/${maxSyncAttempts}):`, error);
+        
+        // 500 오류나 기타 모든 오류에 대해 현재 정보 유지
+        console.log('🔄 서버 오류로 인해 현재 사용자 정보 유지');
+        setUserProfile(currentUser);
+        localStorage.setItem("userProfile", JSON.stringify(currentUser));
       } finally {
         syncInProgress = false;
       }
     };
 
-    // 초기 동기화는 건너뛰기
-    // syncUserRole();
+    // 첫 번째 시도만 즉시 실행, 이후 실패 시 재시도 안 함
+    if (syncAttempts === 0) {
+      syncUserRole();
+    }
 
-    // 동기화 간격을 매우 길게 설정 (30분마다)
-    const interval = setInterval(syncUserRole, 30 * 60 * 1000);
-
-    return () => clearInterval(interval);
+    // 더 이상 자동 재시도하지 않음 (500 오류 방지)
+    // const interval = setInterval(syncUserRole, 5 * 1000);
+    // return () => clearInterval(interval);
   }, [currentUser?.id]);
 
   // 페이지별 프로필 업데이트 체크 (최적화됨)
@@ -570,7 +667,7 @@ const Sidebar = () => {
     clientsAndPartners: "고객사 & 협업사",
     taskManagement: "업무 관리",
     taskJournal: "업무 일지",
-    taskJournalList: "업무 일지 목록",
+    taskJournalList: "",
     byCompany: "법인별",
     teamCorporation: "법인별",
     byDepartment: "부서별",
@@ -610,6 +707,28 @@ const Sidebar = () => {
     //   badge: hasNewFeatures ? "NEW" : undefined
     // },
     {
+      name: t.managers || "담당자",
+      icon: <Users className="h-5 w-5" />,
+      path: "/managers",
+      gradient: "from-indigo-500 to-purple-600",
+      badge: currentUsers.length > 0 ? currentUsers.length : undefined,
+      submenu: [
+        {
+          name: t.managersJournal || "담당자 일지",
+          path: "/managers",
+          icon: <Users className="h-4 w-4" />,
+          color: "text-indigo-500"
+        },
+        {
+          name: t.allJournals || "모든 업무 일지",
+          path: "/managers/all-journals",
+          icon: <FileText className="h-4 w-4" />,
+          color: "text-green-600",
+          badge: journalNotifications > 0 ? journalNotifications : undefined
+        },
+      ],
+    },
+    {
       name: t.projects,
       icon: <Folder className="h-5 w-5" />,
       path: "/projects",
@@ -617,11 +736,17 @@ const Sidebar = () => {
       badge: activeProjects > 0 ? activeProjects : undefined,
       submenu: [
         {
-          name: t.projects,
+          name: t.projects || "프로젝트",
           path: "/projects",
           icon: <FolderOpen className="h-4 w-4" />,
           color: "text-green-600",
           badge: activeProjects > 0 ? activeProjects : undefined
+        },
+        {
+          name: translations.projects?.myProjects || "내 프로젝트",
+          path: "/projects/my",
+          icon: <User className="h-4 w-4" />,
+          color: "text-blue-600"
         },
         // {
         //   name: t.clients || "고객사",
@@ -639,14 +764,15 @@ const Sidebar = () => {
       badge: totalTasks > 0 ? totalTasks : undefined,
       submenu: [
         {
-          name: t.taskManagement || "업무 관리",
+          name: translations.tasks?.taskDatabase || "업무 DB",
           path: "/tasks",
           icon: <ClipboardList className="h-4 w-4" />,
           color: "text-orange-600",
-          badge: activeTasks > 0 ? activeTasks : undefined
+          badge: activeTasks > 0 ? activeTasks : undefined,
+          adminOnly: true
         },
         {
-          name: t.taskJournalList || "업무 일지 목록",
+          name: t.taskJournalList || "프로젝트 업무 일지 목록",
           path: "/tasks/journal-list",
           icon: <ListFilter className="h-4 w-4" />,
           color: "text-red-600",
@@ -654,6 +780,34 @@ const Sidebar = () => {
         },
       ],
     },
+    // {
+    //   name: t.workJournal || "업무일지",
+    //   icon: <FileText className="h-5 w-5" />,
+    //   path: "/work-logs",
+    //   gradient: "from-emerald-500 to-teal-600",
+    //   badge: workJournalsList.length > 0 ? workJournalsList.length : undefined,
+    //   submenu: [
+    //     {
+    //       name: t.myWorkJournal || "내 업무일지",
+    //       path: "/work-logs/my",
+    //       icon: <User className="h-4 w-4" />,
+    //       color: "text-emerald-600"
+    //     },
+    //     {
+    //       name: t.allWorkJournal || "전체 업무일지",
+    //       path: "/work-logs/all",
+    //       icon: <Users className="h-4 w-4" />,
+    //       color: "text-teal-600"
+    //     },
+    //   ],
+    // },
+    // {
+    //   name: "텔레그램 알림",
+    //   icon: <Bell className="h-5 w-5" />,
+    //   path: "/telegram",
+    //   gradient: "from-violet-500 to-purple-600",
+    //   badge: undefined
+    // },
     // {
     //   name: t.chat || "채팅",
     //   icon: <MessageCircle className="h-5 w-5" />,
@@ -749,8 +903,12 @@ const Sidebar = () => {
       "/projects": t.projects || "프로젝트",
       "/tasks": t.taskManagement || "업무 관리",
       "/tasks/journal": t.taskJournal || "업무 일지",
-      "/tasks/journal-list": t.taskJournalList || "업무 일지 목록",
-      "/tasks/journals": t.taskJournalList || "업무 일지 목록",
+      "/tasks/journal-list": t.taskJournalList || "프로젝트 업무 일지 목록",
+      "/tasks/journals": t.taskJournalList || "프로젝트 업무 일지 목록",
+      "/work-logs/my": t.myWorkJournal || "내 업무일지",
+      "/work-logs/all": t.allWorkJournal || "전체 업무일지",
+      "/managers": t.managersJournal || "담당자 일지",
+      "/managers/all-journals": t.allJournals || "모든 업무 일지",
       "/admin": t.adminPanel || "관리자 패널",
       "/profile": t.profile || "프로필"
     };
@@ -993,7 +1151,7 @@ const Sidebar = () => {
                 {/* 멤버십 정보 */}
                 <div className="flex items-center gap-1 mt-1">
                   <Award className="h-3 w-3 text-yellow-500" />
-                  <span className="text-xs text-yellow-400 font-medium">Premium Member</span>
+                  <span className="text-xs text-yellow-400 font-medium">Premium Membership</span>
                 </div>
                 
                 {/* Microsoft 로그인 정보 */}
@@ -1008,6 +1166,21 @@ const Sidebar = () => {
                 Microsoft
                   </div>
                 )}
+
+                {/* 역할 새로고침 버튼 */}
+                <button
+                  onClick={handleRefreshRole}
+                  disabled={isRefreshingRole}
+                  className={cn(
+                    "p-1 rounded-full transition-all duration-200",
+                    "hover:bg-slate-700/50 text-slate-400 hover:text-white",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    isRefreshingRole && "animate-spin"
+                  )}
+                  title="역할 정보 새로고침"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
               </div>
             )}
           </div>
@@ -1065,7 +1238,7 @@ const Sidebar = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-slate-400" />
-                <span className="text-sm text-slate-300">온라인 사용자</span>
+                <span className="text-sm text-slate-300">{getText('온라인 사용자', 'Online Users', '在线用户', 'ผู้ใช้ออนไลน์')}</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -1075,7 +1248,7 @@ const Sidebar = () => {
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {onlineUsers.length === 0 ? (
                 <div className="text-xs text-slate-500 text-center py-2">
-                  현재 온라인 사용자가 없습니다
+                  {getText('현재 온라인 사용자가 없습니다', 'No users currently online', '当前没有在线用户', 'ไม่มีผู้ใช้ออนไลน์ในขณะนี้')}
                 </div>
               ) : (
                 onlineUsers.map((user) => (
@@ -1104,8 +1277,8 @@ const Sidebar = () => {
                                   'bg-green-500/20 text-green-300'
                                 )}
                               >
-                                {user.role === 'admin' ? '관리자' : 
-                                 user.role === 'manager' ? '매니저' : '사용자'}
+                                {user.role === 'admin' ? getText('관리자', 'Admin', '管理员', 'ผู้ดูแลระบบ') : 
+                                 user.role === 'manager' ? getText('매니저', 'Manager', '经理', 'ผู้จัดการ') : getText('사용자', 'User', '用户', 'ผู้ใช้')}
                               </Badge>
                             )}
                           </div>
@@ -1116,15 +1289,15 @@ const Sidebar = () => {
                     <TooltipContent side="right">
                       <div className="space-y-1">
                         <p className="font-medium">{user.name}</p>
-                        <p className="text-xs">상태: 온라인</p>
-                        <p className="text-xs">현재: {user.currentPage}</p>
+                        <p className="text-xs">{getText('상태', 'Status', '状态', 'สถานะ')}: {getText('온라인', 'Online', '在线', 'ออนไลน์')}</p>
+                        <p className="text-xs">{getText('현재', 'Current', '当前', 'ปัจจุบัน')}: {user.currentPage}</p>
                         {user.role && (
-                          <p className="text-xs">역할: {
-                            user.role === 'admin' ? '관리자' : 
-                            user.role === 'manager' ? '매니저' : '사용자'
+                          <p className="text-xs">{getText('역할', 'Role', '角色', 'บทบาท')}: {
+                            user.role === 'admin' ? getText('관리자', 'Admin', '管理员', 'ผู้ดูแลระบบ') : 
+                            user.role === 'manager' ? getText('매니저', 'Manager', '经理', 'ผู้จัดการ') : getText('사용자', 'User', '用户', 'ผู้ใช้')
                           }</p>
                         )}
-                        <p className="text-xs">최근 활동: {user.lastSeen}</p>
+                        <p className="text-xs">{getText('최근 활동', 'Last Activity', '最近活动', 'กิจกรรมล่าสุด')}: {user.lastSeen}</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>

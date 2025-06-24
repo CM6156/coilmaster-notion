@@ -41,7 +41,10 @@ export const TaskCard = ({ task, users = [], onClick }: TaskCardProps) => {
         <div className="flex justify-between items-start">
           <div className="space-y-1">
             <CardTitle className="text-base">{task.title}</CardTitle>
-            <CardDescription className="line-clamp-2">{task.description}</CardDescription>
+            <CardDescription 
+              className="line-clamp-2 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: task.description || '' }}
+            />
           </div>
           <TaskStatusBadge status={task.status} />
         </div>

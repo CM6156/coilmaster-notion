@@ -13,6 +13,7 @@ import { introTranslations } from './ko/intro';
 import { calendarTranslations } from './ko/calendar';
 import { adminTranslations } from './ko/admin';
 import { profileTranslations } from './ko/profile';
+import { managersTranslations, workJournalsTranslations } from './ko/managers';
 
 export const koTranslations: Translations = {
   global: globalTranslations,
@@ -34,4 +35,6 @@ export const koTranslations: Translations = {
   calendar: calendarTranslations,
   admin: adminTranslations,
   profile: profileTranslations,
+  managers: managersTranslations,
+  workJournals: workJournalsTranslations,
 };

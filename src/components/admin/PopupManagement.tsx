@@ -102,18 +102,25 @@ const PopupManagement = () => {
   const fetchPopups = async () => {
     try {
       setIsLoading(true);
+      console.log('Fetching popups...');
+      
       const { data, error } = await supabase
         .from('popup_settings')
         .select('*')
         .order('updated_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Fetched popups:', data);
       setPopups(data || []);
     } catch (error) {
       console.error('Error fetching popups:', error);
       toast({
         title: "에러",
-        description: "팝업 목록을 불러오는데 실패했습니다.",
+        description: `팝업 목록을 불러오는데 실패했습니다: ${error.message || error}`,
         variant: "destructive",
       });
     } finally {
@@ -183,16 +190,34 @@ const PopupManagement = () => {
 
       if (selectedPopup) {
         // 수정
-        const { error } = await supabase
-          .from('popup_settings')
-          .update({
-            ...formData,
-            updated_at: new Date().toISOString(),
-            updated_by: (await supabase.auth.getUser()).data.user?.id
-          })
-          .eq('id', selectedPopup.id);
+        console.log('Updating popup with ID:', selectedPopup.id);
+        console.log('Form data:', formData);
+        
+        const updateData = {
+          title: formData.title,
+          subtitle: formData.subtitle || null,
+          content: formData.content || null,
+          image_url: formData.image_url || null,
+          image_alt: formData.image_alt || null,
+          button_text: formData.button_text,
+          is_active: formData.is_active,
+          show_dont_show_today: formData.show_dont_show_today,
+          background_gradient: formData.background_gradient,
+          updated_at: new Date().toISOString()
+        };
 
-        if (error) throw error;
+        const { data, error } = await supabase
+          .from('popup_settings')
+          .update(updateData)
+          .eq('id', selectedPopup.id)
+          .select();
+
+        if (error) {
+          console.error('Supabase update error:', error);
+          throw error;
+        }
+
+        console.log('Update result:', data);
 
         toast({
           title: "수정 완료",
@@ -200,15 +225,31 @@ const PopupManagement = () => {
         });
       } else {
         // 새로 생성
-        const { error } = await supabase
-          .from('popup_settings')
-          .insert({
-            ...formData,
-            created_by: (await supabase.auth.getUser()).data.user?.id,
-            updated_by: (await supabase.auth.getUser()).data.user?.id
-          });
+        console.log('Creating new popup with data:', formData);
+        
+        const insertData = {
+          title: formData.title,
+          subtitle: formData.subtitle || null,
+          content: formData.content || null,
+          image_url: formData.image_url || null,
+          image_alt: formData.image_alt || null,
+          button_text: formData.button_text,
+          is_active: formData.is_active,
+          show_dont_show_today: formData.show_dont_show_today,
+          background_gradient: formData.background_gradient
+        };
 
-        if (error) throw error;
+        const { data, error } = await supabase
+          .from('popup_settings')
+          .insert(insertData)
+          .select();
+
+        if (error) {
+          console.error('Supabase insert error:', error);
+          throw error;
+        }
+
+        console.log('Insert result:', data);
 
         toast({
           title: "생성 완료",
@@ -224,7 +265,7 @@ const PopupManagement = () => {
       console.error('Error saving popup:', error);
       toast({
         title: "저장 실패",
-        description: "팝업 저장에 실패했습니다.",
+        description: `팝업 저장에 실패했습니다: ${error.message || error}`,
         variant: "destructive",
       });
     } finally {

@@ -61,7 +61,7 @@ const MobileSidebar = () => {
   const { translations, language } = useLanguage();
   const [open, setOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [actualOnlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [sidebarNotifications] = useState<NotificationItem[]>([
     { id: '1', type: 'task', title: '새 업무 할당', message: '프로젝트 A 업무가 할당되었습니다', time: '2분 전', read: false, priority: 'high' },
     { id: '2', type: 'project', title: '프로젝트 업데이트', message: '프로젝트 B가 완료되었습니다', time: '1시간 전', read: false, priority: 'medium' }
@@ -96,7 +96,6 @@ const MobileSidebar = () => {
   const unreadNotifications = notificationsList.filter(n => !n.read).length;
   
   // 실제 온라인 사용자만 필터링
-  const actualOnlineUsers = onlineUsers.filter(user => user.status === 'online');
   const onlineCount = actualOnlineUsers.length;
 
   // 새로운 기능이나 업데이트가 있는지 확인 (실제로는 서버에서 가져와야 함)
@@ -170,7 +169,7 @@ const MobileSidebar = () => {
     clientsAndPartners: "고객사 & 협업사",
     taskManagement: "업무 관리",
     taskJournal: "업무 일지",
-    taskJournalList: "업무 일지 목록",
+    taskJournalList: "프로젝트 업무 일지 목록",
     byCompany: "법인별",
     teamCorporation: "법인별",
     byDepartment: "부서별",
@@ -181,7 +180,13 @@ const MobileSidebar = () => {
     notifications: "알림",
     online: "온라인",
     systemStatus: "시스템 정상",
-    serverStatus: "서버 상태: 양호"
+    serverStatus: "서버 상태: 양호",
+    managers: "담당자",
+    managersJournal: "담당자 일지",
+    allJournals: "모든 업무 일지",
+    workJournal: "업무일지",
+    myWorkJournal: "내 업무일지",
+    allWorkJournal: "전체 업무일지"
   };
 
   interface SubmenuItem {
@@ -210,6 +215,27 @@ const MobileSidebar = () => {
     //   gradient: "from-blue-500 to-purple-600",
     //   badge: hasNewFeatures ? "NEW" : undefined
     // },
+    {
+      name: t.managers || "담당자",
+      icon: <Users className="h-5 w-5" />,
+      path: "/managers",
+      gradient: "from-indigo-500 to-purple-600",
+      badge: actualOnlineUsers.length > 0 ? actualOnlineUsers.length : undefined,
+      submenu: [
+        {
+          name: t.managersJournal || "담당자 일지",
+          path: "/managers",
+          icon: <Users className="h-4 w-4" />,
+          color: "text-indigo-500"
+        },
+        {
+          name: t.allJournals || "모든 업무 일지",
+          path: "/managers/all-journals",
+          icon: <FileText className="h-4 w-4" />,
+          color: "text-green-600"
+        },
+      ],
+    },
     {
       name: t.projects,
       icon: <Folder className="h-5 w-5" />,
@@ -252,6 +278,26 @@ const MobileSidebar = () => {
           icon: <ListFilter className="h-4 w-4" />,
           color: "text-red-600",
           badge: journalEntries > 0 ? journalEntries : undefined
+        },
+      ],
+    },
+    {
+      name: t.workJournal || "업무일지",
+      icon: <FileText className="h-5 w-5" />,
+      path: "/work-logs",
+      gradient: "from-emerald-500 to-teal-600",
+      submenu: [
+        {
+          name: t.myWorkJournal || "내 업무일지",
+          path: "/work-logs/my",
+          icon: <User className="h-4 w-4" />,
+          color: "text-emerald-600"
+        },
+        {
+          name: t.allWorkJournal || "전체 업무일지",
+          path: "/work-logs/all",
+          icon: <Users className="h-4 w-4" />,
+          color: "text-teal-600"
         },
       ],
     },
@@ -300,6 +346,10 @@ const MobileSidebar = () => {
       "/tasks/journal": t.taskJournal || "업무 일지",
       "/tasks/journal-list": t.taskJournalList || "업무 일지 목록",
       "/tasks/journals": t.taskJournalList || "업무 일지 목록",
+      "/work-logs/my": t.myWorkJournal || "내 업무일지",
+      "/work-logs/all": t.allWorkJournal || "전체 업무일지",
+      "/managers": t.managersJournal || "담당자 일지",
+      "/managers/all-journals": t.allJournals || "모든 업무 일지",
       "/admin": t.adminPanel || "관리자 패널",
       "/profile": t.profile || "프로필"
     };
@@ -336,6 +386,17 @@ const MobileSidebar = () => {
   };
 
   const isAdmin = userProfile?.role === "admin" || currentUser?.role === "admin";
+
+  // 번역 헬퍼 함수
+  const getText = (ko: string, en: string, zh: string, th: string) => {
+    switch (language) {
+      case "en": return en;
+      case "zh": return zh;
+      case "th": return th;
+      case "ko":
+      default: return ko;
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

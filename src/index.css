@@ -2,6 +2,171 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tailwind CSS 고급 반응형 유틸리티 */
+@layer utilities {
+  /* 컨테이너 쿼리 기반 유틸리티 */
+  .container-responsive {
+    container-type: inline-size;
+  }
+  
+  /* 터치 최적화 */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* 스크롤 스냅 */
+  .scroll-smooth-x {
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .scroll-smooth-y {
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 안전 영역 지원 (iOS Safari) */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  /* 반응형 텍스트 */
+  .text-responsive-xs { @apply text-xs sm:text-sm md:text-base; }
+  .text-responsive-sm { @apply text-sm sm:text-base md:text-lg; }
+  .text-responsive-base { @apply text-base sm:text-lg md:text-xl; }
+  .text-responsive-lg { @apply text-lg sm:text-xl md:text-2xl; }
+  .text-responsive-xl { @apply text-xl sm:text-2xl md:text-3xl; }
+  
+  /* 컨테이너 쿼리 기반 텍스트 - 구문 수정 */
+  .text-container-xs { font-size: 0.75rem; }
+  .text-container-sm { font-size: 0.875rem; }
+  .text-container-base { font-size: 1rem; }
+  .text-container-lg { font-size: 1.125rem; }
+  
+  @container (min-width: 640px) {
+    .text-container-xs { font-size: 0.875rem; }
+    .text-container-sm { font-size: 1rem; }
+    .text-container-base { font-size: 1.125rem; }
+    .text-container-lg { font-size: 1.25rem; }
+  }
+  
+  @container (min-width: 768px) {
+    .text-container-xs { font-size: 1rem; }
+    .text-container-sm { font-size: 1.125rem; }
+    .text-container-base { font-size: 1.25rem; }
+    .text-container-lg { font-size: 1.5rem; }
+  }
+  
+  /* 반응형 간격 */
+  .space-responsive-y > * + * { @apply mt-2 sm:mt-3 md:mt-4 lg:mt-6; }
+  .space-responsive-x > * + * { @apply ml-2 sm:ml-3 md:ml-4 lg:ml-6; }
+  
+  /* 컨테이너 쿼리 기반 간격 - 구문 수정 */
+  .space-container-y > * + * { margin-top: 0.5rem; }
+  .space-container-x > * + * { margin-left: 0.5rem; }
+  
+  @container (min-width: 640px) {
+    .space-container-y > * + * { margin-top: 0.75rem; }
+    .space-container-x > * + * { margin-left: 0.75rem; }
+  }
+  
+  @container (min-width: 768px) {
+    .space-container-y > * + * { margin-top: 1rem; }
+    .space-container-x > * + * { margin-left: 1rem; }
+  }
+  
+  @container (min-width: 1024px) {
+    .space-container-y > * + * { margin-top: 1.5rem; }
+    .space-container-x > * + * { margin-left: 1.5rem; }
+  }
+  
+  /* 반응형 그리드 */
+  .grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+    gap: 1rem;
+  }
+  
+  /* 방문한 링크 스타일 */
+  .link-visited {
+    @apply visited:text-purple-600 visited:border-purple-300 
+           dark:visited:text-purple-400 dark:visited:border-purple-600;
+  }
+  
+  /* Peer 상태 기반 스타일 */
+  .peer-state-error {
+    @apply peer-invalid:text-red-500 peer-invalid:border-red-500;
+  }
+  
+  /* 트랜지션 프리셋 */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .transition-bounce {
+    @apply transition-transform duration-150 ease-out;
+  }
+  
+  /* 호버 효과 - scale-102 수정 */
+  .hover-lift {
+    @apply hover:scale-105 hover:shadow-lg transition-transform duration-200;
+  }
+  
+  .hover-lift-sm {
+    @apply hover:scale-[1.02] hover:shadow-md transition-transform duration-150;
+  }
+  
+  .active-press {
+    @apply active:scale-95 transition-transform duration-75;
+  }
+  
+  /* 포커스 링 개선 */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+  
+  .focus-ring-inset {
+    @apply focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500;
+  }
+  
+  /* 텍스트 줄임표 (line-clamp) */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  
+  .line-clamp-4 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -97,5 +262,299 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    color-scheme: light dark;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* 커스텀 애니메이션 */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-very-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes bounce-light {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* 애니메이션 클래스 */
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-spin-very-slow {
+  animation: spin-very-slow 20s linear infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.5s ease-out;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.5s ease-out;
+}
+
+.animate-bounce-light {
+  animation: bounce-light 2s ease-in-out infinite;
+}
+
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* 다크 모드 스크롤바 */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 텍스트 선택 스타일 */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
+.dark ::selection {
+  background-color: rgba(147, 197, 253, 0.3);
+}
+
+/* 포커스 스타일 개선 */
+.focus-visible\:ring-2:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+/* 글로벌 트랜지션 */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+.transition-colors {
+  transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* 그림자 유틸리티 */
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.shadow-glow-purple {
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+}
+
+.shadow-glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+/* 백드롭 필터 */
+.backdrop-blur-custom {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 그라데이션 텍스트 */
+.gradient-text {
+  background-image: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  color: transparent;
+  background-clip: text;
+}
+
+/* 모바일 최적화 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* 터치 디바이스 최적화 */
+@media (hover: none) and (pointer: coarse) {
+  button, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* 모바일 디바이스 (스마트폰) */
+@media (max-width: 767px) {
+  .mobile-optimized {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* 텍스트 크기 조정 */
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  h3 { font-size: 1.125rem !important; }
+  
+  /* 패딩 조정 */
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* 카드 간격 조정 */
+  .card {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* 버튼 크기 조정 */
+  .btn-mobile {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* 테이블 반응형 */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 폼 요소 조정 */
+  input, select, textarea {
+    font-size: 16px !important; /* iOS 줌 방지 */
+  }
+}
+
+/* 태블릿 디바이스 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-optimized {
+    padding: 1rem;
+  }
+  
+  /* 그리드 레이아웃 조정 */
+  .grid-tablet {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1024px) {
+  .desktop-optimized {
+    padding: 1.5rem;
+  }
+}
+
+/* 고해상도 디스플레이 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .high-dpi {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* 가로 모드 대응 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .landscape-mobile {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  header {
+    min-height: 3rem !important;
+  }
+}
+
+/* 접근성 개선 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 인쇄 스타일 */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
   }
 }

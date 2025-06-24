@@ -195,17 +195,28 @@ export interface RegisterTranslations {
   title?: string;
   description?: string;
   name?: string;
+  namePlaceholder?: string;
   email?: string;
+  emailPlaceholder?: string;
   password?: string;
+  passwordPlaceholder?: string;
   confirmPassword?: string;
   department?: string;
+  departmentPlaceholder?: string;
   position?: string;
+  positionPlaceholder?: string;
   terms?: string;
   register?: string;
   haveAccount?: string;
   alreadyHaveAccount?: string;
   login?: string;
   processing?: string;
+  passwordStrength?: string;
+  veryWeak?: string;
+  weak?: string;
+  medium?: string;
+  strong?: string;
+  veryStrong?: string;
 }
 
 export interface ForgotPasswordTranslations {
@@ -626,6 +637,24 @@ export interface AdminTranslations {
   totalUsers?: string;
   totalClients?: string;
   refresh?: string;
+}
+
+export interface IntroTranslations {
+  title?: string;
+  start?: string;
+  login?: string;
+  teamCollaboration?: string;
+  description?: string;
+  keyFeatures?: string;
+  taskJournal?: string;
+  taskJournalDesc?: string;
+  calendar?: string;
+  calendarDesc?: string;
+  teamManagement?: string;
+  teamManagementDesc?: string;
+  dataManagement?: string;
+  dataManagementDesc?: string;
+  allRightsReserved?: string;
 }
 
 // Combined Translations interface

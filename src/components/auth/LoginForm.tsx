@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
@@ -10,7 +9,7 @@ import { LanguageCode } from "@/translations";
 import { getLoginSchema, LoginFormValues } from "./login-validation";
 import { useLogin } from "./use-login";
 import { useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, LogIn } from "lucide-react";
 import { useState } from "react";
 
 interface LoginFormProps {
@@ -56,32 +55,41 @@ export default function LoginForm({ translations: t, language }: LoginFormProps)
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" style={{ zIndex: 10, position: "relative" }}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" style={{ zIndex: 10, position: "relative" }}>
+        {/* Email Field */}
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-gray-700">{t?.email || '이메일'}</FormLabel>
+              <FormLabel className="text-white flex items-center space-x-2">
+                <Mail className="w-4 h-4" />
+                <span>{t?.email || '이메일'}</span>
+              </FormLabel>
               <FormControl>
                 <Input 
                   placeholder="email@company.com" 
                   {...field} 
                   autoComplete="email"
-                  disabled={false}
-                  className="border-gray-200 focus-visible:ring-primary/50 h-11 rounded-lg"
+                  disabled={isLoading}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-cyan-400 focus:ring-cyan-400/20 h-12 rounded-xl"
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
+
+        {/* Password Field */}
         <FormField
           control={form.control}
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-gray-700">{t?.password || '비밀번호'}</FormLabel>
+              <FormLabel className="text-white flex items-center space-x-2">
+                <Lock className="w-4 h-4" />
+                <span>{t?.password || '비밀번호'}</span>
+              </FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input 
@@ -89,68 +97,80 @@ export default function LoginForm({ translations: t, language }: LoginFormProps)
                     placeholder="••••••••" 
                     {...field} 
                     autoComplete="current-password"
-                    disabled={false}
-                    className="border-gray-200 focus-visible:ring-primary/50 h-11 rounded-lg pr-10" 
+                    disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-cyan-400 focus:ring-cyan-400/20 h-12 rounded-xl pr-12" 
                   />
                   <button 
                     type="button"
-                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
                     onClick={toggleShowPassword}
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
+
+        {/* Remember Me & Forgot Password */}
         <div className="flex items-center justify-between">
           <FormField
             control={form.control}
             name="rememberMe"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    disabled={false}
+                    disabled={isLoading}
                     id="rememberMe"
+                    className="border-white/20 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
                   />
                 </FormControl>
-                <FormLabel htmlFor="rememberMe" className="text-sm font-normal cursor-pointer text-gray-600">
+                <FormLabel htmlFor="rememberMe" className="text-sm font-normal cursor-pointer text-gray-300 hover:text-white transition-colors">
                   {t?.rememberMe || '로그인 상태 유지'}
                 </FormLabel>
               </FormItem>
             )}
           />
-          <Link to="/forgot-password" className="text-sm text-primary hover:text-primary/80 transition-colors font-medium z-10">
+          <Link 
+            to="/forgot-password" 
+            className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+          >
             {t?.forgotPassword || '비밀번호 찾기'}
           </Link>
         </div>
+
+        {/* Login Button */}
         <Button 
           type="submit" 
-          className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 h-12 rounded-lg font-medium text-base" 
-          disabled={false}
+          className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-semibold h-12 rounded-xl text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-cyan-500/25" 
+          disabled={isLoading}
         >
-          {isLoading ? t?.processing || '로그인 중...' : t?.login || '로그인'}
+          {isLoading ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              <span>{t?.processing || '로그인 중...'}</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <LogIn className="w-5 h-5" />
+              <span>{t?.login || '로그인'}</span>
+            </div>
+          )}
         </Button>
 
-        <div className="relative my-3">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="flex items-center">
+            <div className="flex-grow border-t border-white/20"></div>
+            <span className="px-4 text-gray-300 text-sm">{t?.or || '또는'}</span>
+            <div className="flex-grow border-t border-white/20"></div>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-2 text-gray-500">{t?.or || '또는 새 계정 등록'}</span>
-          </div>
-        </div>
-
-        <div className="text-center">
-          <Link to="/register" className="text-primary hover:underline text-sm font-medium z-10 relative">
-            {t?.registerAccount || '새 계정 등록하기'}
-          </Link>
         </div>
       </form>
     </Form>

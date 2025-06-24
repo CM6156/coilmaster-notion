@@ -76,22 +76,11 @@ export const UserActivityProvider: React.FC<UserActivityProviderProps> = ({ chil
         role: userData.role
       };
 
-      // 로컬 상태 업데이트
+      // 로컬 상태만 업데이트 (DB 저장 제거)
       setCurrentUsers(prev => {
         const filtered = prev.filter(u => u.id !== user.id);
         return [...filtered, userActivity];
       });
-
-      // 데이터베이스에 활동 상태 저장 (선택사항)
-      await supabase
-        .from('user_activities')
-        .upsert({
-          user_id: user.id,
-          current_page: page,
-          current_tab: tab,
-          last_activity: new Date().toISOString(),
-          is_online: true
-        });
 
     } catch (error) {
       console.error('사용자 활동 업데이트 실패:', error);

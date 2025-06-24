@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/AppContext";
 import { format } from "date-fns";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   Select,
   SelectContent,
@@ -389,12 +390,11 @@ export default function JournalCreateDialog({ open, onOpenChange, onCreate }: Jo
           {/* 업무 내용 */}
           <div className="space-y-2">
             <Label htmlFor="content">업무 내용 *</Label>
-            <Textarea
-              id="content"
+            <RichTextEditor
               value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+              onChange={(content) => setFormData(prev => ({ ...prev, content }))}
               placeholder="오늘 수행한 업무 내용을 상세히 작성해주세요..."
-              className="min-h-[120px]"
+              height={250}
             />
           </div>
 

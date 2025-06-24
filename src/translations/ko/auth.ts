@@ -1,4 +1,3 @@
-
 import { LoginTranslations, RegisterTranslations, ForgotPasswordTranslations } from '@/types';
 
 export const authTranslations = {
@@ -28,7 +27,9 @@ export const authTranslations = {
     passwordPlaceholder: "••••••••",
     confirmPassword: "비밀번호 확인",
     department: "부서",
+    departmentPlaceholder: "부서 선택",
     position: "직책",
+    positionPlaceholder: "직책 선택",
     terms: "이용약관에 동의합니다",
     register: "가입하기",
     haveAccount: "이미 계정이 있으신가요?",

@@ -8,6 +8,25 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      // 백엔드 API 서버로 프록시 (실제 LINE API 호출)
+      '/api': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('프록시 오류:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('백엔드 API 프록시 요청:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('백엔드 API 프록시 응답:', proxyRes.statusCode, req.url);
+          });
+        }
+      }
+    }
   },
   plugins: [
     react(),

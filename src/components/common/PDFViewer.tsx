@@ -31,7 +31,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[95vh] p-0 gap-0">
+      <DialogContent 
+        className="max-w-6xl max-h-[95vh] p-0 gap-0 [&>button]:hidden"
+      >
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-slate-50 to-blue-50">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold text-gray-900">
@@ -60,7 +62,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onOpenChange(false)}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-gray-600 hover:text-gray-900 hover:bg-red-50"
+                title="닫기"
               >
                 <X className="h-4 w-4" />
               </Button>
