@@ -58,7 +58,7 @@ export default function ResetPassword() {
         console.log("- expires_at:", hashParams.get('expires_at'));
         
         // 코드 버전 확인용
-        console.log("🆕 코드 버전: 2024-01-15 - refresh_token 선택사항 지원");
+        console.log("🆕 코드 버전: 2024-01-20-17:30 - FINAL FIX 배포됨");
       
       console.log("Search 파라미터 분석:");
       for (const [key, value] of searchParams) {
