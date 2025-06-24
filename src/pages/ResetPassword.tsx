@@ -127,22 +127,55 @@ export default function ResetPassword() {
                 return;
               }
             } else {
-              console.log("🔄 refresh_token이 없음 - 토큰 검증 후 직접 진행");
+              console.log("🔄 refresh_token이 없음 - 직접 PASSWORD_RECOVERY 이벤트 트리거");
               
-              // access_token으로 사용자 정보 확인
-              const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-              
-              if (userError || !userData.user) {
-                throw new Error("토큰이 유효하지 않거나 만료되었습니다.");
+              try {
+                // access_token만으로 임시 세션 생성 시도
+                const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: '' // 빈 문자열로 시도
+                });
+                
+                if (sessionError) {
+                  console.log("⚠️ 세션 생성 실패, PASSWORD_RECOVERY 이벤트 대기로 전환");
+                  // 세션 생성에 실패해도 PASSWORD_RECOVERY 이벤트가 발생할 수 있음
+                  console.log("📧 Supabase에서 자동으로 PASSWORD_RECOVERY 이벤트를 발생시킬 것입니다.");
+                } else if (sessionData.session) {
+                  console.log("✅ 임시 세션 생성 성공");
+                  if (mounted) {
+                    window.history.replaceState({}, document.title, "/reset-password");
+                  }
+                  finalizeValidation(true);
+                  return;
+                }
+              } catch (tempError) {
+                console.log("ℹ️ 임시 세션 생성 시도 실패, 이벤트 대기 모드로 전환");
               }
               
-              console.log("✅ 토큰 검증 성공 - 비밀번호 재설정 허용");
-              // URL에서 토큰 제거
+              // 위 방법들이 실패해도 PASSWORD_RECOVERY 이벤트를 기다림
+              console.log("⏳ PASSWORD_RECOVERY 이벤트 대기 중...");
+              
+              // URL에서 토큰 제거 (이벤트가 발생하면 처리될 예정)
               if (mounted) {
                 window.history.replaceState({}, document.title, "/reset-password");
               }
-              finalizeValidation(true);
-              return;
+              
+              // 10초 정도 PASSWORD_RECOVERY 이벤트를 기다림
+              recoveryDetected = false;
+              validationTimeout = setTimeout(() => {
+                if (mounted && !recoveryDetected) {
+                  console.log("❌ PASSWORD_RECOVERY 이벤트가 발생하지 않음");
+                  const errorMsg = language === "ko" ? 
+                    "비밀번호 재설정 링크가 만료되었거나 유효하지 않습니다. 새로운 링크를 요청해주세요." :
+                    language === "en" ? 
+                    "Password reset link has expired or is invalid. Please request a new link." :
+                    language === "zh" ? 
+                    "密码重置链接已过期或无效。请请求新链接。" :
+                    "ลิงก์รีเซ็ตรหัสผ่านหมดอายุหรือไม่ถูกต้อง โปรดขอลิงก์ใหม่";
+                  
+                  finalizeValidation(false, errorMsg);
+                }
+              }, 10000); // 10초로 증가
             }
           } catch (error: any) {
             console.error("토큰 처리 오류:", error);
