@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,14 +10,36 @@ import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/LanguageContext";
 import LanguageSelector from "@/components/LanguageSelector";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const [lastRequestTime, setLastRequestTime] = useState<number | null>(null);
   const { toast } = useToast();
   const { translations, language } = useLanguage();
+  
+  // 쿨다운 타이머 효과
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (cooldownTime > 0) {
+      interval = setInterval(() => {
+        setCooldownTime(prev => {
+          if (prev <= 1) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cooldownTime]);
   
   // Translation fallbacks for password reset
   const t = {
@@ -58,6 +79,15 @@ export default function ForgotPassword() {
       (language === "ko" ? "오류가 발생했습니다" : 
        language === "en" ? "An error occurred" : 
        language === "zh" ? "发生错误" : "เกิดข้อผิดพลาด"),
+    rateLimitMessage: language === "ko" ? "요청이 너무 빈번합니다" : 
+                      language === "en" ? "Too many requests" : 
+                      language === "zh" ? "请求过于频繁" : "คำขอมากเกินไป",
+    waitMessage: language === "ko" ? "초 후에 다시 시도할 수 있습니다" : 
+                 language === "en" ? "seconds before you can try again" : 
+                 language === "zh" ? "秒后可以重试" : "วินาทีก่อนที่คุณจะลองอีกครั้ง",
+    resendIn: language === "ko" ? "다시 보내기 (" : 
+              language === "en" ? "Resend in (" : 
+              language === "zh" ? "重新发送 (" : "ส่งอีกครั้งใน (",
   };
   
   const formSchema = z.object({
@@ -78,15 +108,51 @@ export default function ForgotPassword() {
   });
 
   const onSubmit = async (data: FormValues) => {
+    // 쿨다운 체크
+    if (cooldownTime > 0) {
+      toast({
+        title: t.rateLimitMessage,
+        description: `${cooldownTime}${t.waitMessage}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 마지막 요청으로부터 10초가 지나지 않았다면 차단
+    const now = Date.now();
+    if (lastRequestTime && (now - lastRequestTime) < 10000) {
+      const remainingTime = Math.ceil((10000 - (now - lastRequestTime)) / 1000);
+      setCooldownTime(remainingTime);
+      toast({
+        title: t.rateLimitMessage,
+        description: `${remainingTime}${t.waitMessage}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
+    setLastRequestTime(now);
     
     try {
-      // Here we'll integrate with Supabase for password reset
+      // 현재 환경에 맞는 리다이렉트 URL 설정
+      const baseUrl = window.location.origin;
+      const redirectTo = `${baseUrl}/reset-password`;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectTo,
       });
       
-      if (error) throw error;
+      if (error) {
+        // 429 오류 특별 처리
+        if (error.message.includes('10 seconds') || error.message.includes('429')) {
+          setCooldownTime(10);
+          throw new Error(language === "ko" ? "보안을 위해 10초 후에 다시 시도해주세요." : 
+                         language === "en" ? "For security, please try again after 10 seconds." : 
+                         language === "zh" ? "为了安全，请在10秒后重试。" : "เพื่อความปลอดภัย โปรดลองอีกครั้งหลังจาก 10 วินาที");
+        }
+        throw error;
+      }
       
       setIsSubmitted(true);
       
@@ -94,19 +160,32 @@ export default function ForgotPassword() {
         title: t.successMessage,
         description: t.successDescription,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("비밀번호 재설정 오류:", error);
+      
+      let errorDescription = language === "ko" ? "비밀번호 재설정 링크를 보내는 중 오류가 발생했습니다. 다시 시도해 주세요." : 
+                            language === "en" ? "Error sending password reset link. Please try again." : 
+                            language === "zh" ? "发送密码重置链接时出错。请再试一次。" : "เกิดข้อผิดพลาดในการส่งลิงก์รีเซ็ตรหัสผ่าน โปรดลองอีกครั้ง";
+      
+      // 사용자 정의 오류 메시지가 있다면 사용
+      if (error.message && typeof error.message === 'string') {
+        errorDescription = error.message;
+      }
       
       toast({
         title: t.errorMessage,
-        description: language === "ko" ? "비밀번호 재설정 링크를 보내는 중 오류가 발생했습니다. 다시 시도해 주세요." : 
-                    language === "en" ? "Error sending password reset link. Please try again." : 
-                    language === "zh" ? "发送密码重置链接时出错。请再试一次。" : "เกิดข้อผิดพลาดในการส่งลิงก์รีเซ็ตรหัสผ่าน โปรดลองอีกครั้ง",
+        description: errorDescription,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getButtonText = () => {
+    if (isLoading) return t.processing;
+    if (cooldownTime > 0) return `${t.resendIn}${cooldownTime}s)`;
+    return t.sendLink;
   };
 
   return (
@@ -120,12 +199,21 @@ export default function ForgotPassword() {
           <CardHeader className="space-y-2 pb-2">
             <div className="w-full flex justify-center mb-2">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Mail className="h-6 w-6 text-primary" />
+                {cooldownTime > 0 ? (
+                  <Clock className="h-6 w-6 text-orange-500" />
+                ) : (
+                  <Mail className="h-6 w-6 text-primary" />
+                )}
               </div>
             </div>
             <CardTitle className="text-2xl text-center font-bold">{t.title}</CardTitle>
             <CardDescription className="text-center">
               {isSubmitted ? t.successDescription : t.description}
+              {cooldownTime > 0 && (
+                <div className="mt-2 text-orange-600 text-sm">
+                  {cooldownTime}초 후에 다시 시도할 수 있습니다
+                </div>
+              )}
             </CardDescription>
           </CardHeader>
           
@@ -144,7 +232,7 @@ export default function ForgotPassword() {
                             placeholder="email@company.com" 
                             {...field} 
                             autoComplete="email"
-                            disabled={isLoading}
+                            disabled={isLoading || cooldownTime > 0}
                             className="border-slate-200 focus-visible:ring-primary/50"
                           />
                         </FormControl>
@@ -156,9 +244,9 @@ export default function ForgotPassword() {
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70" 
-                    disabled={isLoading}
+                    disabled={isLoading || cooldownTime > 0}
                   >
-                    {isLoading ? t.processing : t.sendLink}
+                    {getButtonText()}
                   </Button>
                 </form>
               </Form>
@@ -168,9 +256,13 @@ export default function ForgotPassword() {
                 <Button 
                   variant="outline" 
                   className="w-full border border-gray-300"
-                  onClick={() => setIsSubmitted(false)}
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    form.reset();
+                  }}
+                  disabled={cooldownTime > 0}
                 >
-                  {t.sendLink}
+                  {cooldownTime > 0 ? `${t.resendIn}${cooldownTime}s)` : t.sendLink}
                 </Button>
               </div>
             )}
