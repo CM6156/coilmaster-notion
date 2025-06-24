@@ -83,9 +83,49 @@ export default function ResetPassword() {
         }
         
         // URL에서 토큰 추출 (Query Parameters 방식)
-        let accessToken = searchParams.get('access_token');
+        let accessToken = searchParams.get('access_token') || searchParams.get('token');
         let refreshToken = searchParams.get('refresh_token');
         let type = searchParams.get('type');
+        
+        // Query Parameters 방식의 token이 있는 경우 (Supabase Email Link 방식)
+        const urlToken = searchParams.get('token');
+        const urlType = searchParams.get('type');
+        
+        if (urlToken && urlType === 'recovery') {
+          console.log("🔗 Query Parameters 방식의 토큰 발견");
+          console.log("- token:", urlToken ? "있음" : "없음");
+          console.log("- type:", urlType);
+          
+          try {
+            console.log("🔐 verifyOtp를 사용하여 토큰 처리 시도");
+            
+            // Supabase verifyOtp 방식으로 토큰 검증
+            const { data, error } = await supabase.auth.verifyOtp({
+              token_hash: urlToken,
+              type: 'recovery'
+            });
+            
+            if (error) {
+              console.error("verifyOtp 오류:", error);
+              throw new Error("비밀번호 재설정 링크가 만료되었거나 유효하지 않습니다.");
+            }
+            
+            if (data.session) {
+              console.log("✅ verifyOtp 성공 - 세션 생성됨");
+              // URL에서 토큰 제거
+              if (mounted) {
+                window.history.replaceState({}, document.title, "/reset-password");
+              }
+              finalizeValidation(true);
+              return;
+            }
+            
+          } catch (error: any) {
+            console.error("verifyOtp 처리 오류:", error);
+            finalizeValidation(false, error.message || "비밀번호 재설정 링크 처리 중 오류가 발생했습니다.");
+            return;
+          }
+        }
         
         // URL Hash에서 토큰 추출 (Supabase 기본 방식)
         if (!accessToken && window.location.hash) {
